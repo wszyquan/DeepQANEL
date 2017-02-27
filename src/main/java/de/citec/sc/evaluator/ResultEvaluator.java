@@ -57,9 +57,9 @@ public class ResultEvaluator {
             p+="\n========================================================================\n";
             
             
-            log.info(p);
+//            log.info(p);
 
-            if(similarity == 1.0)
+//            if(similarity == 1.0)
                 score += similarity;
         }
 

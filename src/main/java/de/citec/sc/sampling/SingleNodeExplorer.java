@@ -26,12 +26,12 @@ import sampling.Explorer;
  */
 public class SingleNodeExplorer implements Explorer<State> {
 
-    private Map<Integer, String> assignedDUDES;
+    private Map<Integer, String> semanticTypes;
     private Search indexLookUp;
 
 
     public SingleNodeExplorer(Search indexLookUp, Map<Integer, String> assignedDUDES) {
-        this.assignedDUDES = assignedDUDES;
+        this.semanticTypes = assignedDUDES;
         this.indexLookUp = indexLookUp;
     }
 
@@ -46,9 +46,9 @@ public class SingleNodeExplorer implements Explorer<State> {
 
             if (pos.startsWith("NN") || pos.startsWith("JJ") || pos.startsWith("VB")) {
                 //assign all dudes
-                for (Integer indexOfDude : assignedDUDES.keySet()) {
+                for (Integer indexOfDude : semanticTypes.keySet()) {
 
-                    String dudeName = assignedDUDES.get(indexOfDude);
+                    String dudeName = semanticTypes.get(indexOfDude);
                     
 //                    if(!(dudeName.equals("Class") || dudeName.equals("UnderSpecifiedClass"))){
 //                        continue;

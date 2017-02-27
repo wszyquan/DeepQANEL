@@ -11,15 +11,14 @@ import corpus.SampledInstance;
 import de.citec.sc.corpus.AnnotatedDocument;
 import de.citec.sc.evaluator.ResultEvaluator;
 import de.citec.sc.learning.LinkingObjectiveFunction;
+import de.citec.sc.learning.MyTrainer;
 import de.citec.sc.query.Search;
-import de.citec.sc.sampling.MySampler;
+import de.citec.sc.sampling.MyBeamSearchSampler;
 import de.citec.sc.sampling.SingleNodeExplorer;
 import de.citec.sc.sampling.StateInitializer;
 import de.citec.sc.template.NodeSimilarityTemplate;
 import de.citec.sc.variable.State;
 import evaluation.EvaluationUtil;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import learning.AdvancedLearner;
 import learning.Learner;
@@ -29,12 +28,10 @@ import learning.Trainer;
 import learning.optimizer.SGD;
 import learning.scorer.DefaultScorer;
 import learning.scorer.Scorer;
-import sampling.DefaultSampler;
 import sampling.Explorer;
 import sampling.samplingstrategies.AcceptStrategies;
-import sampling.samplingstrategies.SamplingStrategies;
-import sampling.stoppingcriterion.StepLimitCriterion;
-import sampling.stoppingcriterion.StoppingCriterion;
+import sampling.samplingstrategies.BeamSearchSamplingStrategies;
+import sampling.stoppingcriterion.BeamSearchStoppingCriterion;
 import templates.AbstractTemplate;
 
 /**
@@ -45,7 +42,7 @@ public class Pipeline {
 
     private static final int NUMBER_OF_SAMPLING_STEPS = 10;
     private static final int NUMBER_OF_EPOCHS = 1;
-    private static final int MAX_NUMBER_OF_CANDIDATES = 10;
+    private static final int NUMBER_OF_STATES = 1;
     private static Logger log = LogManager.getFormatterLogger();
 
     public static Model<AnnotatedDocument, State> train(List<AnnotatedDocument> trainingDocuments, Search indexLookUp, Map<Integer, String> semanticTypes) {
@@ -74,8 +71,6 @@ public class Pipeline {
          */
         Model<AnnotatedDocument, State> model = new Model<>(scorer, templates);
 
-        
-
         /*
          * Create an Initializer that is responsible for providing an initial
          * state for the sampling chain given a document.
@@ -87,8 +82,6 @@ public class Pipeline {
          * starting state. The sampler will select one of these states as a
          * successor state and, thus, perform the sampling procedure.
          */
-        
-
         List<Explorer<State>> explorers = new ArrayList<>();
         explorers.add(new SingleNodeExplorer(indexLookUp, semanticTypes));
         /*
@@ -101,15 +94,27 @@ public class Pipeline {
          * too small, the sampler can not reach the optimal solution. Large
          * values, however, increase computation time.
          */
-        StoppingCriterion<State> stoppingCriterion = new StepLimitCriterion<>(NUMBER_OF_SAMPLING_STEPS);
+//        StoppingCriterion<State> stoppingCriterion2 = new StepLimitCriterion<>(NUMBER_OF_SAMPLING_STEPS);
+        BeamSearchStoppingCriterion<State> stoppingCriterion = new BeamSearchStoppingCriterion<State>() {
+
+            @Override
+            public boolean checkCondition(List<List<State>> chain, int step) {
+                return chain.size() >= NUMBER_OF_SAMPLING_STEPS;
+            }
+        };
 
         /*
          * 
          */
-        MySampler<AnnotatedDocument, State, String> sampler = new MySampler<>(model, objective, explorers,
+        MyBeamSearchSampler<AnnotatedDocument, State, String> sampler = new MyBeamSearchSampler<>(model, objective, explorers,
                 stoppingCriterion);
-        sampler.setTrainingSamplingStrategy(SamplingStrategies.greedyObjectiveStrategy());
-        sampler.setTrainingAcceptStrategy(AcceptStrategies.objectiveAccept());
+        sampler.setTrainSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategy(NUMBER_OF_STATES, s -> s.getObjectiveScore()));
+        sampler.setTrainAcceptStrategy(AcceptStrategies.strictObjectiveAccept());
+        
+//        MySampler<AnnotatedDocument, State, String> sampler = new MySampler<>(model, objective, explorers,
+//                stoppingCriterion);
+//        sampler.setTrainingSamplingStrategy(SamplingStrategies.greedyObjectiveStrategy());
+//        sampler.setTrainingAcceptStrategy(AcceptStrategies.objectiveAccept());
         /*
          * Define a learning strategy. The learner will receive state pairs
          * which can be used to update the models parameters.
@@ -123,9 +128,8 @@ public class Pipeline {
          * The trainer will loop over the data and invoke sampling and learning.
          * Additionally, it can invoke predictions on new data.
          */
-        Trainer trainer = new Trainer();
-        trainer.train(sampler, initializer, learner, trainingDocuments, NUMBER_OF_EPOCHS);
-
+        MyTrainer trainer = new MyTrainer();
+        trainer.train(sampler, initializer, learner, trainingDocuments, i-> i.getGoldQueryString(), NUMBER_OF_EPOCHS);
         System.out.println(model.toDetailedString());
         return model;
     }
@@ -151,21 +155,15 @@ public class Pipeline {
          * state for the sampling chain given a document.
          */
         StateInitializer initializer = new StateInitializer();
-        
-        HashMap<Integer, String> assignedDUDES = new LinkedHashMap<>();
-        
-        assignedDUDES.put(1, "Property");
-        assignedDUDES.put(2, "Individual");
-        assignedDUDES.put(3, "Class");
-        assignedDUDES.put(4, "UnderSpecifiedClass");
-        
+
+
         /*
          * Define the explorers that will provide "neighboring" states given a
          * starting state. The sampler will select one of these states as a
          * successor state and, thus, perform the sampling procedure.
          */
         List<Explorer<State>> explorers = new ArrayList<>();
-        explorers.add(new SingleNodeExplorer(indexLookUp, assignedDUDES));
+        explorers.add(new SingleNodeExplorer(indexLookUp, semanticTypes));
         /*
          * Create a sampler that generates sampling chains with which it will
          * trigger weight updates during training.
@@ -176,13 +174,21 @@ public class Pipeline {
          * too small, the sampler can not reach the optimal solution. Large
          * values, however, increase computation time.
          */
-        StoppingCriterion<State> stoppingCriterion = new StepLimitCriterion<>(NUMBER_OF_SAMPLING_STEPS);
+        BeamSearchStoppingCriterion<State> stoppingCriterion = new BeamSearchStoppingCriterion<State>() {
+
+            @Override
+            public boolean checkCondition(List<List<State>> chain, int step) {
+                return chain.size() >= NUMBER_OF_SAMPLING_STEPS;
+            }
+        };
 
         /*
          * 
          */
-        DefaultSampler<AnnotatedDocument, State, String> sampler = new DefaultSampler<>(model, objective, explorers,
+        MyBeamSearchSampler<AnnotatedDocument, State, String> sampler = new MyBeamSearchSampler<>(model, objective, explorers,
                 stoppingCriterion);
+        sampler.setTestSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategy(NUMBER_OF_STATES, s -> s.getModelScore()));
+        sampler.setTestAcceptStrategy(AcceptStrategies.strictModelAccept());
 
         log.info("####################");
         log.info("Start testing");
@@ -190,9 +196,14 @@ public class Pipeline {
         /*
          * The trainer will loop over the data and invoke sampling.
          */
-        Trainer trainer = new Trainer();
-        List<SampledInstance<AnnotatedDocument, String, State>> testResults = trainer.test(sampler,
-                initializer, testDocuments);
+        MyTrainer trainer = new MyTrainer();
+        
+        //set the beam size
+        trainer.setBeamSize(100);
+        //set objective function
+        trainer.setObjectiveFunction(objective);
+        
+        List<SampledInstance<AnnotatedDocument, String, State>> testResults = trainer.test(sampler, initializer, testDocuments, i-> i.getGoldQueryString());
         /*
          * Since the test function does not compute the objective score of its
          * predictions, we do that here, manually, before we print the results.
@@ -214,8 +225,6 @@ public class Pipeline {
          */
         log.debug("Model weights:");
         EvaluationUtil.printWeights(model, -1);
-
-
 
         //evaluator
         Map<String, Double> scores = ResultEvaluator.evaluateAllByObjective(testResults, objective);

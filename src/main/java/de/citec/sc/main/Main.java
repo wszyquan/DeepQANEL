@@ -42,7 +42,10 @@ public class Main {
         
         Set<String> validPOSTags = new HashSet<>();
         validPOSTags.add("NN");
-        validPOSTags.add("VB");
+        validPOSTags.add("NNP");
+        validPOSTags.add("NNS");
+        validPOSTags.add("VBZ");
+        validPOSTags.add("VBD");
         validPOSTags.add("JJ");
 
 
