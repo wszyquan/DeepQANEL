@@ -60,7 +60,7 @@ public class MyBeamSearchSampler<InstanceT, StateT extends AbstractState<Instanc
 	 * currently always uses the greedy variant.
 	 */
 	private BeamSearchSamplingStrategy<StateT> trainSamplingStrategy = BeamSearchSamplingStrategies
-			.greedyBeamSearchSamplingStrategy(DEFAULT_BEAM_SIZE, s -> s.getModelScore());
+			.greedyBeamSearchSamplingStrategyByObjective(DEFAULT_BEAM_SIZE, s -> s.getObjectiveScore());
 
 	private AcceptStrategy<StateT> trainAcceptStrategy = AcceptStrategies.objectiveAccept();
 
@@ -68,7 +68,7 @@ public class MyBeamSearchSampler<InstanceT, StateT extends AbstractState<Instanc
 	 * Greedy sampling strategy for test phase.
 	 */
 	private BeamSearchSamplingStrategy<StateT> testSamplingStrategy = BeamSearchSamplingStrategies
-			.greedyBeamSearchSamplingStrategy(DEFAULT_BEAM_SIZE, s -> s.getModelScore());
+			.greedyBeamSearchSamplingStrategyByModel(DEFAULT_BEAM_SIZE, s -> s.getModelScore());
 
 	/**
 	 * Strict accept strategy for test phase.
@@ -350,9 +350,6 @@ public class MyBeamSearchSampler<InstanceT, StateT extends AbstractState<Instanc
 					: currentState;
 			acceptedStates.add(acceptedState);
 		}
-                if(acceptedStates.isEmpty()){
-                    acceptedStates.addAll(currentStates);
-                }
 		return new ArrayList<>(acceptedStates);
 	}
 

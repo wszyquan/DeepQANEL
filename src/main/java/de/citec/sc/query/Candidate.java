@@ -30,7 +30,12 @@ public class Candidate {
         this.priorScore = priorScore;
         this.uri = i.getUri();
         this.matollPreposition = i.getPreposition();
-        
+
+        this.matollFrame = "";
+        this.matollPos = "";
+        this.matollSubj = "";
+        this.matollObj = "";
+
 //        this.matollFrame = i.getFrame();
 //        this.matollPos = i.getPos();
 //        this.matollSubj = i.getSubj();

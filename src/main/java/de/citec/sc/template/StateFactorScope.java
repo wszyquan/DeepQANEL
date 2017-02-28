@@ -17,30 +17,23 @@ import templates.AbstractTemplate;
  * @author sherzod
  * @param <HiddenVariable>
  */
-public class SingleNodeFactorScope<HiddenVariable> extends FactorScope {
+public class StateFactorScope<State> extends FactorScope{
 
-    private HiddenVariable var;
-    private AnnotatedDocument doc;
+    private State state;
 
-    public SingleNodeFactorScope(AbstractTemplate<?, ?, ?> template, HiddenVariable var, AnnotatedDocument doc) {
-        super(template, var, doc);
-        this.doc = doc;
-        this.var = var;
+    public StateFactorScope(AbstractTemplate<?, ?, ?> template, State state) {
+        super(template, state);
+        this.state = state;
     }
 
-    public HiddenVariable getVar() {
-        return var;
-    }
-
-    public AnnotatedDocument getDoc() {
-        return doc;
+    public State getState() {
+        return state;
     }
 
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 41 * hash + Objects.hashCode(this.var);
-        hash = 41 * hash + Objects.hashCode(this.doc);
+        hash = 59 * hash + Objects.hashCode(this.state);
         return hash;
     }
 
@@ -52,11 +45,8 @@ public class SingleNodeFactorScope<HiddenVariable> extends FactorScope {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final SingleNodeFactorScope<?> other = (SingleNodeFactorScope<?>) obj;
-        if (!Objects.equals(this.var, other.var)) {
-            return false;
-        }
-        if (!Objects.equals(this.doc, other.doc)) {
+        final StateFactorScope<?> other = (StateFactorScope<?>) obj;
+        if (!Objects.equals(this.state, other.state)) {
             return false;
         }
         return true;
@@ -64,7 +54,9 @@ public class SingleNodeFactorScope<HiddenVariable> extends FactorScope {
 
     @Override
     public String toString() {
-        return "SingleNodeFactorScope{" + "var=" + var + ", doc=" + doc + '}';
+        return "SingleNodeFactorScope{" + "state=" + state + '}';
     }
 
+    
+    
 }

@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import learning.Model;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -32,14 +33,21 @@ public class Main {
         Search indexLookUp = new Search(retriever, wordNet);
         Search.useMatoll(true);
         ManualLexicon.useManualLexicon(true);
-        
+
         Map<Integer, String> semanticTypes = new LinkedHashMap<>();
 
         semanticTypes.put(1, "Property");
         semanticTypes.put(2, "Individual");
         semanticTypes.put(3, "Class");
         semanticTypes.put(4, "UnderSpecifiedClass");
-        
+
+        Map<Integer, String> specialSemanticTypes = new LinkedHashMap<>();
+
+        semanticTypes.put(1, "Property");
+        semanticTypes.put(2, "Individual");
+        semanticTypes.put(3, "Class");
+        semanticTypes.put(4, "UnderSpecifiedClass");
+
         Set<String> validPOSTags = new HashSet<>();
         validPOSTags.add("NN");
         validPOSTags.add("NNP");
@@ -48,16 +56,24 @@ public class Main {
         validPOSTags.add("VBD");
         validPOSTags.add("JJ");
 
-
-        QALDCorpus trainCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qald6Train);
-        QALDCorpus testCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qald6Test);
+        boolean includeYAGO = false;
+        boolean includeAggregation = false;
+        boolean includeUNION = false;
+        boolean onlyDBO = true;
+        boolean isHybrid = false;
+        
+        QALDCorpus trainCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qald6Train, includeYAGO, includeAggregation, includeUNION, onlyDBO, isHybrid);
+        QALDCorpus testCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qald6Test, includeYAGO, includeAggregation, includeUNION, onlyDBO, isHybrid);
 
         List<AnnotatedDocument> trainDocuments = getDocuments(trainCorpus, indexLookUp);
         List<AnnotatedDocument> testDocuments = getDocuments(testCorpus, indexLookUp);
-        
+        //filter by number of words in the question text == 3
+        trainDocuments = trainDocuments.stream().filter(s1 -> s1.getQuestionString().split(" ").length == 6).collect(Collectors.toList());
+//        testDocuments = testDocuments.stream().filter(s1 -> s1.getQuestionString().split(" ").length == 3).collect(Collectors.toList());
+
         Model trainedModel = Pipeline.train(trainDocuments, indexLookUp, semanticTypes);
-        
-        Pipeline.test(trainedModel, testDocuments, indexLookUp, semanticTypes);
+
+        Pipeline.test(trainedModel, trainDocuments, indexLookUp, semanticTypes);
 
     }
 
@@ -65,16 +81,15 @@ public class Main {
         List<AnnotatedDocument> documents = new ArrayList<>();
 
         for (AnnotatedDocument d1 : corpus.getDocuments()) {
-            String question = d1.getQuestionString();
+//            String question = d1.getQuestionString();
 
-            if (d1.getQaldInstance().getAggregation().equals("false") && d1.getQaldInstance().getOnlyDBO().equals("true") && d1.getQaldInstance().getHybrid().equals("false")) {
+//            if (d1.getQaldInstance().getAggregation().equals("false") && d1.getQaldInstance().getOnlyDBO().equals("true") && d1.getQaldInstance().getHybrid().equals("false")) {
+            if (DBpediaEndpoint.isValidQuery(d1.getGoldQueryString(), false)) {
 
-                if (DBpediaEndpoint.isValidQuery(d1.getGoldQueryString(), false)) {
-
-                    d1.getParse().mergeEdges(indexLookUp);
-                    documents.add(d1);
-                }
+                d1.getParse().mergeEdges(indexLookUp);
+                documents.add(d1);
             }
+//            }
         }
 
         return documents;

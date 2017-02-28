@@ -31,7 +31,8 @@ public class QATemplateFactory implements TemplateFactory<AnnotatedDocument, Sta
         switch (templateName) {
             case "NodeSimilarityTemplate":
                 return new NodeSimilarityTemplate();
-
+            case "LexicalTemplate":
+                return new LexicalTemplate();
 
         }
 

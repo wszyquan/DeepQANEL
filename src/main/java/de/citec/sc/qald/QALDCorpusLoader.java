@@ -40,16 +40,22 @@ public class QALDCorpusLoader {
      * reads QALD corpus {QALDSubset, QALD4Train, QALD4Test, QALD5Train,
      * QALD5Test} and returns corpus with documents
      *
+     * @param dataset
      * @param file
+     * @param includeAggregation
+     * @param includeUNION
+     * @param onlyDBO
+     * @param isHybrid
+     * @param includeYAGO
      * @return corpus
      */
-    public static QALDCorpus load(Dataset d) {
+    public static QALDCorpus load(Dataset dataset, boolean includeYAGO, boolean includeAggregation, boolean includeUNION, boolean onlyDBO, boolean isHybrid) {
 
         String filePath = "";
 
         List<Question> questions = new ArrayList<>();
 
-        switch (d.name()) {
+        switch (dataset.name()) {
             case "qald4Train":
                 filePath = qald4FileTrain;
                 questions = QALD.getQuestions(filePath);
@@ -84,7 +90,9 @@ public class QALDCorpusLoader {
         }
 
         QALDCorpus corpus = new QALDCorpus();
-        corpus.setCorpusName(d.name());
+        corpus.setCorpusName(dataset.name());
+
+        List<AnnotatedDocument> documents = new ArrayList<>();
 
         for (Question q : questions) {
             DependencyParse parse = StanfordParser.parse(q.getQuestionText());
@@ -115,16 +123,47 @@ public class QALDCorpusLoader {
             }
 
             if (!isLoop) {
-                
+
                 AnnotatedDocument document = new AnnotatedDocument(parse, q);
 
-                corpus.addDocument(document);
+                documents.add(document);
+                
             } else {
                 System.out.println(parse);
                 System.out.println("Loop at: " + loop);
 
             }
 
+        }
+        
+        for(AnnotatedDocument doc : documents){
+            if(!includeAggregation){
+                if(doc.getQaldInstance().getAggregation().equals("true")){
+                    continue;
+                }
+            }
+            if(!includeYAGO){
+                if(doc.getQaldInstance().getQueryText().contains("http://dbpedia.org/class/yago/")){
+                    continue;
+                }
+            }
+            if(!includeUNION){
+                if(doc.getQaldInstance().getQueryText().contains("UNION")){
+                    continue;
+                }
+            }
+            if(!isHybrid){
+                if(doc.getQaldInstance().getHybrid().equals("true")){
+                    continue;
+                }
+            }
+            if(onlyDBO){
+                if(doc.getQaldInstance().getOnlyDBO().equals("false")){
+                    continue;
+                }
+            }
+            
+            corpus.addDocument(doc);
         }
 
         return corpus;
@@ -150,7 +189,7 @@ public class QALDCorpusLoader {
                 String onlyDBO = (String) o1.get("onlydbo");
 
                 String aggregation = (String) o1.get("aggregation");
-                 String id = o1.get("id").toString();
+                String id = o1.get("id").toString();
 
                 HashMap queryTextObj = (HashMap) o1.get("query");
                 String query = (String) queryTextObj.get("sparql");

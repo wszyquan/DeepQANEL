@@ -3,7 +3,7 @@
 
 
 <question aggregation="false" answertype="resource" hybrid="false" id="1" onlydbo="true">
-<string lang="en"><![CDATA[Who created Family Guy?]]></string>
+<string lang="en"><![CDATA[Who created Wikipedia?]]></string>
 <string lang="de"><![CDATA[Welchen Fluss überspannt die Brooklyn Bridge?]]></string>
 <string lang="es"><![CDATA[¿Por qué río cruza la Brooklyn Bridge?]]></string>
 <string lang="it"><![CDATA[Quale fiume attraversa il ponte di Brooklyn?]]></string>
@@ -18,7 +18,7 @@
 <keywords lang="nl"><![CDATA[rivier, Brooklyn Bridge, overspant]]></keywords>
 <keywords lang="ro"><![CDATA[râu, traversează, podul din Brooklyn]]></keywords>
 <query><![CDATA[
-SELECT DISTINCT ?uri WHERE { <http://dbpedia.org/resource/Family_Guy> <http://dbpedia.org/ontology/creator> ?uri . }  
+SELECT DISTINCT ?uri WHERE { <http://dbpedia.org/resource/Wikipedia> <http://dbpedia.org/ontology/author> ?uri . }  
 ]]></query>
 <answers>
 </answers>

@@ -11,11 +11,13 @@ import corpus.SampledInstance;
 import de.citec.sc.corpus.AnnotatedDocument;
 import de.citec.sc.evaluator.ResultEvaluator;
 import de.citec.sc.learning.LinkingObjectiveFunction;
-import de.citec.sc.learning.MyTrainer;
+import de.citec.sc.learning.NELHybridSamplingStrategyCallback;
+import de.citec.sc.learning.NELTrainer;
 import de.citec.sc.query.Search;
 import de.citec.sc.sampling.MyBeamSearchSampler;
 import de.citec.sc.sampling.SingleNodeExplorer;
 import de.citec.sc.sampling.StateInitializer;
+import de.citec.sc.template.LexicalTemplate;
 import de.citec.sc.template.NodeSimilarityTemplate;
 import de.citec.sc.variable.State;
 import evaluation.EvaluationUtil;
@@ -24,7 +26,6 @@ import learning.AdvancedLearner;
 import learning.Learner;
 import learning.Model;
 import learning.ObjectiveFunction;
-import learning.Trainer;
 import learning.optimizer.SGD;
 import learning.scorer.DefaultScorer;
 import learning.scorer.Scorer;
@@ -42,7 +43,8 @@ public class Pipeline {
 
     private static final int NUMBER_OF_SAMPLING_STEPS = 10;
     private static final int NUMBER_OF_EPOCHS = 1;
-    private static final int NUMBER_OF_STATES = 1;
+    private static final int BEAM_SIZE_TRAINING = 1;
+    private static final int BEAM_SIZE_TEST = 1;
     private static Logger log = LogManager.getFormatterLogger();
 
     public static Model<AnnotatedDocument, State> train(List<AnnotatedDocument> trainingDocuments, Search indexLookUp, Map<Integer, String> semanticTypes) {
@@ -59,7 +61,7 @@ public class Pipeline {
          * score generated states.
          */
         List<AbstractTemplate<AnnotatedDocument, State, ?>> templates = new ArrayList<>();
-        templates.add(new NodeSimilarityTemplate());
+        templates.add(new LexicalTemplate());
 
         /*
          * Create the scorer object that computes a score from the factors'
@@ -108,9 +110,9 @@ public class Pipeline {
          */
         MyBeamSearchSampler<AnnotatedDocument, State, String> sampler = new MyBeamSearchSampler<>(model, objective, explorers,
                 stoppingCriterion);
-        sampler.setTrainSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategy(NUMBER_OF_STATES, s -> s.getObjectiveScore()));
+        sampler.setTrainSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategyByObjective(BEAM_SIZE_TRAINING, s -> s.getObjectiveScore()));
         sampler.setTrainAcceptStrategy(AcceptStrategies.strictObjectiveAccept());
-        
+
 //        MySampler<AnnotatedDocument, State, String> sampler = new MySampler<>(model, objective, explorers,
 //                stoppingCriterion);
 //        sampler.setTrainingSamplingStrategy(SamplingStrategies.greedyObjectiveStrategy());
@@ -128,8 +130,14 @@ public class Pipeline {
          * The trainer will loop over the data and invoke sampling and learning.
          * Additionally, it can invoke predictions on new data.
          */
-        MyTrainer trainer = new MyTrainer();
-        trainer.train(sampler, initializer, learner, trainingDocuments, i-> i.getGoldQueryString(), NUMBER_OF_EPOCHS);
+        NELTrainer trainer = new NELTrainer();
+        //hybrid training procedure, switches every epoch to another scoring method {objective or model}
+        trainer.addEpochCallback(new NELHybridSamplingStrategyCallback(sampler, BEAM_SIZE_TRAINING));
+        
+        //train the model
+        trainer.train(sampler, initializer, learner, trainingDocuments, i -> i.getGoldQueryString(), NUMBER_OF_EPOCHS);
+        
+
         System.out.println(model.toDetailedString());
         return model;
     }
@@ -148,7 +156,7 @@ public class Pipeline {
          * score generated states.
          */
         List<AbstractTemplate<AnnotatedDocument, State, ?>> templates = new ArrayList<>();
-        templates.add(new NodeSimilarityTemplate());
+        templates.add(new LexicalTemplate());
 
         /*
          * Create an Initializer that is responsible for providing an initial
@@ -187,7 +195,7 @@ public class Pipeline {
          */
         MyBeamSearchSampler<AnnotatedDocument, State, String> sampler = new MyBeamSearchSampler<>(model, objective, explorers,
                 stoppingCriterion);
-        sampler.setTestSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategy(NUMBER_OF_STATES, s -> s.getModelScore()));
+        sampler.setTestSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategyByModel(BEAM_SIZE_TEST, s -> s.getModelScore()));
         sampler.setTestAcceptStrategy(AcceptStrategies.strictModelAccept());
 
         log.info("####################");
@@ -196,14 +204,9 @@ public class Pipeline {
         /*
          * The trainer will loop over the data and invoke sampling.
          */
-        MyTrainer trainer = new MyTrainer();
-        
-        //set the beam size
-        trainer.setBeamSize(100);
-        //set objective function
-        trainer.setObjectiveFunction(objective);
-        
-        List<SampledInstance<AnnotatedDocument, String, State>> testResults = trainer.test(sampler, initializer, testDocuments, i-> i.getGoldQueryString());
+        NELTrainer trainer = new NELTrainer();
+
+        List<SampledInstance<AnnotatedDocument, String, State>> testResults = trainer.test(sampler, initializer, testDocuments, i -> i.getGoldQueryString());
         /*
          * Since the test function does not compute the objective score of its
          * predictions, we do that here, manually, before we print the results.
