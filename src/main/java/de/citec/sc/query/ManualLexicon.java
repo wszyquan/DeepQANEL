@@ -59,6 +59,7 @@ public class ManualLexicon {
         addLexicon("japanese musical instruments", "http://dbpedia.org/class/yago/JapaneseMusicalInstruments", lexiconResources);
         addLexicon("eating disorders", "http://dbpedia.org/class/yago/EatingDisorders", lexiconResources);
         addLexicon("vatican television", "http://dbpedia.org/resource/Vatican_Television_Center", lexiconResources);
+        addLexicon("U.S. president Lincoln", "http://dbpedia.org/resource/Abraham_Lincoln", lexiconResources);
         addLexicon("battle chess", "'Battle Chess'@en", lexiconResources);
 //        addLexicon("juan carlos i", "http://dbpedia.org/resource/Juan_Carlos_I_of_Spain", lexiconResources);
 
@@ -88,6 +89,7 @@ public class ManualLexicon {
         addLexicon("from", "http://dbpedia.org/ontology/artist", lexiconProperties);
 
         addLexicon("pages", "http://dbpedia.org/ontology/numberOfPages", lexiconProperties);
+        addLexicon("artistic movement", "http://dbpedia.org/ontology/movement", lexiconProperties);
         addLexicon("tall", "http://dbpedia.org/ontology/height", lexiconProperties);
         addLexicon("high", "http://dbpedia.org/ontology/height", lexiconProperties);
         addLexicon("high", "http://dbpedia.org/ontology/elevation", lexiconProperties);
@@ -229,12 +231,15 @@ public class ManualLexicon {
         addLexicon("live", "http://dbpedia.org/ontology/populationTotal", lexiconProperties);
         addLexicon("inspired", "http://dbpedia.org/ontology/influenced", lexiconProperties);
         addLexicon("form of government", "http://dbpedia.org/ontology/governmentType", lexiconProperties);
+        addLexicon("government", "http://dbpedia.org/ontology/governmentType", lexiconProperties);
         addLexicon("in", "http://dbpedia.org/ontology/ingredient", lexiconProperties);
         addLexicon("full name", "http://dbpedia.org/ontology/alias", lexiconProperties);
         addLexicon("kind of music", "http://dbpedia.org/ontology/genre", lexiconProperties);
         addLexicon("doctoral supervisor", "http://dbpedia.org/ontology/doctoralAdvisor", lexiconProperties);
         addLexicon("on", "http://dbpedia.org/property/crewMembers", lexiconProperties);
         addLexicon("calories", "http://dbpedia.org/ontology/approximateCalories", lexiconProperties);
+        addLexicon("kind", "http://dbpedia.org/ontology/genre", lexiconProperties);
+        addLexicon("in", "http://dbpedia.org/ontology/ingredient", lexiconProperties);
 
         //resources
         addLexicon("kaurismäki", "http://dbpedia.org/resource/Aki_Kaurismäki", lexiconResources);
@@ -244,6 +249,7 @@ public class ManualLexicon {
         //restriction classes
         addLexicon("czech", "http://dbpedia.org/ontology/country###http://dbpedia.org/resource/Czech_Republic", lexiconRestrictionClasses);
         addLexicon("computer scientist", "http://dbpedia.org/ontology/field###http://dbpedia.org/resource/Computer_science", lexiconRestrictionClasses);
+        addLexicon("canadian", "http://dbpedia.org/ontology/birthPlace###http://dbpedia.org/resource/Canada", lexiconRestrictionClasses);
     }
 
     private static void addLexicon(String key, String value, HashMap<String, Set<String>> map) {

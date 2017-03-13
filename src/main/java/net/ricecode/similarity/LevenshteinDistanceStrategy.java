@@ -41,7 +41,7 @@ public class LevenshteinDistanceStrategy implements SimilarityStrategy {
         
         
     }
-    public double score(String first, String second) {
+    public static double score(String first, String second) {
         int maxLength = Math.max(first.length(), second.length());
         //Can't divide by 0
         if (maxLength == 0) return 1.0d;
@@ -52,7 +52,7 @@ public class LevenshteinDistanceStrategy implements SimilarityStrategy {
         return d;
     }
 
-    protected int computeEditDistance(String first, String second) {
+    protected static int computeEditDistance(String first, String second) {
         first = first.toLowerCase();
         second = second.toLowerCase();
 

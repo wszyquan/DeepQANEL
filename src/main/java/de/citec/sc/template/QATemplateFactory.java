@@ -9,6 +9,8 @@ import de.citec.sc.corpus.AnnotatedDocument;
 import de.citec.sc.variable.State;
 import exceptions.UnkownTemplateRequestedException;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import templates.AbstractTemplate;
 import templates.TemplateFactory;
 
@@ -18,11 +20,12 @@ import templates.TemplateFactory;
  */
 public class QATemplateFactory implements TemplateFactory<AnnotatedDocument, State> {
 
-    private HashMap<Integer, String> assignedDUDES;
+    private static Set<String> validPOSTags;
+    private static Map<Integer, String> semanticTypes;
 
-    public QATemplateFactory(HashMap<Integer, String> assignedDUDES) {
-        this.assignedDUDES = assignedDUDES;
-
+    public static void initialize(Set<String> v, Map<Integer, String> s) {
+        validPOSTags = v;
+        semanticTypes = s;
     }
 
     @Override
@@ -32,7 +35,11 @@ public class QATemplateFactory implements TemplateFactory<AnnotatedDocument, Sta
             case "NodeSimilarityTemplate":
                 return new NodeSimilarityTemplate();
             case "LexicalTemplate":
-                return new LexicalTemplate();
+                return new LexicalTemplate(validPOSTags, semanticTypes);
+            case "ResourceTemplate":
+                return new ResourceTemplate(validPOSTags, semanticTypes);
+            case "PropertyTemplate":
+                return new PropertyTemplate(validPOSTags, semanticTypes);
 
         }
 

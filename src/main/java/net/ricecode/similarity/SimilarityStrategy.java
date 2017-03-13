@@ -37,5 +37,5 @@ public interface SimilarityStrategy {
 	 * @param second The second string to compare.
 	 * @return A number between 0.0 and 1.0.
 	 */
-    double score(String first, String second);
+    
 }

@@ -33,7 +33,7 @@ public class Search {
     private static HashMap<String, Set<Candidate>> cacheRestrictionClasses;
     private static HashMap<String, Integer> propertyFrequency;
 
-    private final Comparator<Candidate> dbpediaScoreComparator = new Comparator<Candidate>() {
+    private static final Comparator<Candidate> dbpediaScoreComparator = new Comparator<Candidate>() {
 
         @Override
         public int compare(Candidate s1, Candidate s2) {
@@ -52,7 +52,7 @@ public class Search {
         useMatoll = b;
     }
 
-    private final Comparator<Candidate> matollScoreComparator = new Comparator<Candidate>() {
+    private static final Comparator<Candidate> matollScoreComparator = new Comparator<Candidate>() {
 
         @Override
         public int compare(Candidate s1, Candidate s2) {
@@ -67,7 +67,7 @@ public class Search {
         }
     };
 
-    private void loadFrequency() {
+    private static void loadFrequency() {
 
         propertyFrequency = new HashMap<>();
 
@@ -83,7 +83,7 @@ public class Search {
         }
     }
 
-    public int getPriorScore(String uri) {
+    public static int getPriorScore(String uri) {
         int score = -1;
 
         if (propertyFrequency.containsKey(uri)) {
@@ -93,27 +93,27 @@ public class Search {
         return score;
     }
 
-    public Search() {
+    public static void load() {
         if (retriever == null) {
             retriever = new CandidateRetrieverOnLucene(false, "luceneIndexes/resourceIndex", "luceneIndexes/classIndex", "luceneIndexes/predicateIndex", "luceneIndexes/matollIndex");
         }
 
         if (wordNet == null) {
-            this.wordNet = new WordNetAnalyzer("src/main/resources/WordNet-3.0/dict");
+            wordNet = new WordNetAnalyzer("src/main/resources/WordNet-3.0/dict");
         }
 
         loadFrequency();
     }
 
-    public Search(CandidateRetriever retriever, WordNetAnalyzer wordNet) {
-        this.retriever = retriever;
+    public static void load(CandidateRetriever r, WordNetAnalyzer w) {
+        retriever = r;
 
-        this.wordNet = wordNet;
+        wordNet = w;
 
         loadFrequency();
     }
 
-    public boolean matches(String mergedTokens) {
+    public static boolean matches(String mergedTokens) {
 
         //if the merged tokens contain any upper case character, then all tokens must start with uppercase
         //else return false
@@ -155,7 +155,7 @@ public class Search {
         return false;
     }
 
-    public Set<Candidate> getResources(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
+    public static Set<Candidate> getResources(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
         Set<Candidate> instances = new LinkedHashSet<>();
 
         if (cacheResources == null) {
@@ -174,7 +174,7 @@ public class Search {
 
         for (String queryTerm : queryTerms) {
 
-            List<Instance> matches = this.retriever.getAllResources(queryTerm, topK);
+            List<Instance> matches = retriever.getAllResources(queryTerm, topK);
 
             for (Instance i : matches) {
                 if (!result.contains(i)) {
@@ -191,7 +191,7 @@ public class Search {
         return instances;
     }
 
-    public Set<Candidate> getPredicates(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
+    public static Set<Candidate> getPredicates(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
 
         Set<Candidate> instances = new LinkedHashSet<>();
 
@@ -213,7 +213,7 @@ public class Search {
         //get from dbpedia index
         for (String queryTerm : queryTerms) {
 
-            List<Instance> matches = this.retriever.getPredicatesInDBpedia(queryTerm, topK, partialMatch);
+            List<Instance> matches = retriever.getPredicatesInDBpedia(queryTerm, topK, partialMatch);
 
             for (Instance i : matches) {
                 if (!resultDBpedia.contains(i)) {
@@ -236,7 +236,7 @@ public class Search {
         //get MATOLL predicates
         for (String queryTerm : queryTerms) {
 
-            List<Instance> matches = this.retriever.getPredicatesInMatoll(queryTerm, topK);
+            List<Instance> matches = retriever.getPredicatesInMatoll(queryTerm, topK);
 
             for (Instance i : matches) {
                 if (!resultMATOLL.contains(i)) {
@@ -262,7 +262,7 @@ public class Search {
         return instances;
     }
 
-    public Set<Candidate> getClasses(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
+    public static Set<Candidate> getClasses(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
         Set<Candidate> instances = new LinkedHashSet<>();
 
         if (cacheClasses == null) {
@@ -281,7 +281,7 @@ public class Search {
 
         for (String queryTerm : queryTerms) {
 
-            List<Instance> matches = this.retriever.getAllClasses(queryTerm, topK, partialMatch);
+            List<Instance> matches = retriever.getAllClasses(queryTerm, topK, partialMatch);
 
             for (Instance i : matches) {
 
@@ -302,7 +302,7 @@ public class Search {
         return instances;
     }
 
-    private Set<Candidate> normalize(List<Instance> m, boolean dbpedia, int topK) {
+    private static Set<Candidate> normalize(List<Instance> m, boolean dbpedia, int topK) {
         List<Candidate> result = new ArrayList<>();
 
         double max = 0;
@@ -347,7 +347,7 @@ public class Search {
         return normalizedCandidates;
     }
 
-    public Set<Candidate> getRestrictionClasses(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
+    public static Set<Candidate> getRestrictionClasses(String searchTerm, int topK, boolean lemmatize, boolean partialMatch, boolean useWordNet) {
         Set<Candidate> instances = new LinkedHashSet<>();
 
         //if it's not set to true return empty list
@@ -371,7 +371,7 @@ public class Search {
 
         for (String queryTerm : queryTerms) {
 
-            List<Instance> matches = this.retriever.getRestrictionClasses(queryTerm, topK);
+            List<Instance> matches = retriever.getRestrictionClasses(queryTerm, topK);
 
             for (Instance i : matches) {
                 if (!result.contains(i)) {
@@ -393,7 +393,7 @@ public class Search {
         return instances;
     }
 
-    private Set<String> getQueryTerms(String searchTerm, boolean lemmatize, boolean useWordNet) {
+    private static Set<String> getQueryTerms(String searchTerm, boolean lemmatize, boolean useWordNet) {
 
         Set<String> queryTerms = new LinkedHashSet<>();
         queryTerms.add(searchTerm);

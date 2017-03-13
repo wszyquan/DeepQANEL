@@ -287,7 +287,7 @@ public class NodeSimilarityTemplate extends AbstractTemplate<AnnotatedDocument, 
         uri = temp.trim().toLowerCase();
 
         //compute levenstein edit distance similarity and normalize
-        final double weightedEditSimilarity = stringSim.score(uri, node);
+        final double weightedEditSimilarity = StringSimilarityMeasures.score(uri, node);
 
         return weightedEditSimilarity;
     }

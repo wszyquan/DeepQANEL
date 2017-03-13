@@ -25,62 +25,27 @@ public class ProjectConfiguration {
     private static final Map<String, String> PARAMETERS = new HashMap<>();
 
     private static final String PARAMETER_PREFIX = "-";
-
     private static final String PARAM_SETTING_DATASET = "-d1";
     private static final String PARAM_SETTING_TEST_DATASET = "-d2";
     private static final String PARAM_SETTING_MANUAL_LEXICON = "-m1";
     private static final String PARAM_SETTING_MATOLL = "-m2";
-    private static final String PARAM_SETTING_MAX_WORDS = "-w";
     private static final String PARAM_SETTING_EPOCHS = "-e";
     private static final String PARAM_SETTING_SAMPLING_STEPS = "-s";
-    private static final String PARAM_SETTING_LEARNER = "-l";
-    private static final String PARAM_SETTING_EVALUATOR = "-v";
-    private static final String PARAM_SETTING_TOP_K = "-k";
-    private static final String PARAM_SETTING_FEATURE_LEVEL = "-f";
-    private static final String PARAM_SETTING_SAMPLING_SCORE = "-p";
-    private static final String PARAM_SETTING_WORD_COUNT_OPERATOR = "-t";
-    private static final String PARAM_SETTING_SORT_TRAINING_DATA_BY_WORD_COUNT = "-g";
-    private static final String PARAM_SETTING_RETRIEVER_METHOD = "-c";
-    private static final String PARAM_SETTING_MAX_WORDS_TEST = "-q";
-    private static final String PARAM_SETTING_TASK = "-o";
-    
+    private static final String PARAM_SETTING_BEAMSIZE_TRAINING = "-k";
+    private static final String PARAM_SETTING_BEAMSIZE_TEST = "-l";
+    private static final String PARAM_SETTING_TASK = "-t";
+    private static final String PARAM_SETTING_MAX_WORD_COUNT = "-w";
+
     public static String getTask() {
 
         return PARAMETERS.get(PARAM_SETTING_TASK);
     }
-    
-    public static String getRetrieverMethod() {
 
-        return PARAMETERS.get(PARAM_SETTING_RETRIEVER_METHOD);
-    }
-
-    public static boolean orderTrainingData() {
-
-        String g= PARAMETERS.get(PARAM_SETTING_SORT_TRAINING_DATA_BY_WORD_COUNT);
-        return g.equals("true");
-    }
-    public static String getWordCountOperator() {
-
-        return PARAMETERS.get(PARAM_SETTING_WORD_COUNT_OPERATOR);
-    }
-    public static String getSamplingMethod() {
-
-        return PARAMETERS.get(PARAM_SETTING_SAMPLING_SCORE);
-    }
-    public static String getLearner() {
-
-        return PARAMETERS.get(PARAM_SETTING_LEARNER);
-    }
-    public static String getFeatureLevel() {
-
-        return PARAMETERS.get(PARAM_SETTING_FEATURE_LEVEL);
-    }
-    
-    public static String getDatasetName() {
+    public static String getTrainingDatasetName() {
 
         return PARAMETERS.get(PARAM_SETTING_DATASET);
     }
-    
+
     public static String getTestDatasetName() {
 
         return PARAMETERS.get(PARAM_SETTING_TEST_DATASET);
@@ -100,24 +65,13 @@ public class ProjectConfiguration {
         return useMatoll;
     }
 
-    public static String getEvaluatorName() {
-        String evaluatorName = PARAMETERS.get(PARAM_SETTING_EVALUATOR);
-
-        return evaluatorName;
-    }
-
-    public static int getMaxTestWords() {
-        int maxWords = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_MAX_WORDS_TEST));
-        return maxWords;
-    }
-    
-    public static int getMaxWords() {
-        int maxWords = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_MAX_WORDS));
-        return maxWords;
-    }
-
     public static int getNumberOfEpochs() {
         int numberOfEpochs = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_EPOCHS));
+
+        return numberOfEpochs;
+    }
+    public static int getMaxWordCount() {
+        int numberOfEpochs = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_MAX_WORD_COUNT));
 
         return numberOfEpochs;
     }
@@ -128,8 +82,13 @@ public class ProjectConfiguration {
         return numberOfSamplingSteps;
     }
 
-    public static int getNumberOfKSamples() {
-        int numberKSamples = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_TOP_K));
+    public static int getTrainingBeamSize() {
+        int numberKSamples = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_BEAMSIZE_TRAINING));
+
+        return numberKSamples;
+    }
+    public static int getTestBeamSize() {
+        int numberKSamples = Integer.parseInt(PARAMETERS.get(PARAM_SETTING_BEAMSIZE_TEST));
 
         return numberKSamples;
     }

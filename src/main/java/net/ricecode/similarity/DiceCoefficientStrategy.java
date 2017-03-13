@@ -42,7 +42,7 @@ public class DiceCoefficientStrategy implements SimilarityStrategy {
 	 * @param second The second string to compare.
 	 * @return A number between 0.0 and 1.0.
 	 */
-	public double score(String first, String second) {
+	public static double score(String first, String second) {
 	
 		// Create two sets of character bigrams, one for each string.
 		Set<String> s1 = splitIntoBigrams(first);
@@ -68,7 +68,7 @@ public class DiceCoefficientStrategy implements SimilarityStrategy {
 	}
 
 	
-	private Set<String> splitIntoBigrams(String s) {
+	private static Set<String> splitIntoBigrams(String s) {
 		ArrayList<String> bigrams = new ArrayList<String>();
 	
 		if (s.length() < 2) {

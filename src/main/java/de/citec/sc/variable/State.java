@@ -85,7 +85,7 @@ public class State extends AbstractState<AnnotatedDocument> {
 
     public void addHiddenVariable(Integer indexOfNode, Integer indexOfDUDE, Candidate c) {
         
-        HiddenVariable v = new HiddenVariable(indexOfNode, indexOfNode, c);
+        HiddenVariable v = new HiddenVariable(indexOfNode, indexOfDUDE, c);
         this.hiddenVariables.put(indexOfNode, v);
 
     }

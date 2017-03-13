@@ -11,7 +11,7 @@ package net.ricecode.similarity;
  */
 public class Test {
     public static void main(String[] args) {
-        SimilarityStrategy simScorer = new StringSimilarityMeasures();
-        System.out.println(simScorer.score("author", "created"));
+        
+        System.out.println(StringSimilarityMeasures.score("author", "created"));
     }
 }

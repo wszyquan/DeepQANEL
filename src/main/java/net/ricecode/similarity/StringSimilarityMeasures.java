@@ -27,10 +27,10 @@ public class StringSimilarityMeasures implements SimilarityStrategy {
      * 
      * @return double score
      */
-    public double score(String first, String second) {
-        double s1 = l.score(first, second);
+    public static double score(String first, String second) {
+        double s1 = LevenshteinDistanceStrategy.score(first, second);
 
-        double s2 = dc.score(first, second);
+        double s2 = DiceCoefficientStrategy.score(first, second);
 
         double f1 =  (2 * s1 * s2) / (s1 + s2);
         

@@ -15,6 +15,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import learning.Vector;
 import net.ricecode.similarity.SimilarityStrategy;
@@ -27,8 +28,12 @@ import templates.AbstractTemplate;
  */
 public class LexicalTemplate extends AbstractTemplate<AnnotatedDocument, State, StateFactorScope<State>> {
 
-    public LexicalTemplate() {
+    private Set<String> validPOSTags;
+    private Map<Integer, String> semanticTypes;
 
+    public LexicalTemplate(Set<String> validPOSTags, Map<Integer, String> s) {
+        this.validPOSTags = validPOSTags;
+        this.semanticTypes = s;
     }
 
     @Override
@@ -54,16 +59,27 @@ public class LexicalTemplate extends AbstractTemplate<AnnotatedDocument, State, 
         //add dependency feature between tokens
         for (Integer tokenID : state.getDocument().getParse().getNodes().keySet()) {
             String headToken = state.getDocument().getParse().getToken(tokenID);
+            String headPOS = state.getDocument().getParse().getPOSTag(tokenID);
             String headURI = state.getHiddenVariables().get(tokenID).getCandidate().getUri();
+            Integer dudeID = state.getHiddenVariables().get(tokenID).getDudeId();
+            String dudeName = "EMPTY";
+            if (dudeID != -1) {
+                dudeName = semanticTypes.get(dudeID);
+            }
 
             if (headURI.equals("EMPTY_STRING")) {
                 continue;
             }
+            if (headURI.equals("EMPTY_STRING") && validPOSTags.contains(headPOS)) {
+                featureVector.addToValue("LEXICAL FEATURE:  EXCLUDE THIS WORD: URI: " + headURI + " TOKEN: " + headToken + " POS : " + headPOS, 1.0);
+            }
 
-            List<Integer> dependentNodes = state.getDocument().getParse().getDependentEdges(tokenID);
+            List<Integer> dependentNodes = state.getDocument().getParse().getDependentEdgesWithCertainPOSTAG(tokenID, validPOSTags);
+            List<Integer> siblings = state.getDocument().getParse().getSiblingsWithCertainPOSTAG(tokenID, validPOSTags);
 
-            if (dependentNodes.isEmpty()) {
-                featureVector.addToValue("LEXICAL FEATURE: URI: " + headURI + " TOKEN: " + headToken, 1.0);
+            //add lexical feature only for nouns, noun phrases etc.
+            if (dependentNodes.isEmpty() && (headPOS.startsWith("NN") || headPOS.startsWith("JJ"))) {
+                featureVector.addToValue("LEXICAL FEATURE: URI: " + headURI + " TOKEN: " + headToken + " POS : " + headPOS + " SEM-TYPE: " + dudeName, 1.0);
             }
 
             if (!dependentNodes.isEmpty()) {
@@ -71,9 +87,30 @@ public class LexicalTemplate extends AbstractTemplate<AnnotatedDocument, State, 
                 for (Integer depNodeID : dependentNodes) {
                     String depToken = state.getDocument().getParse().getToken(depNodeID);
                     String depURI = state.getHiddenVariables().get(depNodeID).getCandidate().getUri();
+                    Integer depDudeID = state.getHiddenVariables().get(depNodeID).getDudeId();
+                    String depDudeName = "EMPTY";
+                    if (depDudeID != -1) {
+                        depDudeName = semanticTypes.get(depDudeID);
+                    }
 
                     if (!depURI.equals("EMPTY_STRING")) {
-                        featureVector.addToValue("LEXICAL DEP FEATURE: HEAD_URI: " + headURI + " HEAD_TOKEN: " + headToken + " CHILD_URI: " + depURI + " CHILD_TOKEN: " + depToken, 1.0);
+                        featureVector.addToValue("LEXICAL DEP FEATURE: HEAD_URI: " + headURI + " HEAD_TOKEN: " + headToken + " SEM-TYPE: " + dudeName + " CHILD_URI: " + depURI + " CHILD_TOKEN: " + depToken + " DEP-SEM-TYPE: "+depDudeName, 1.0);
+                    }
+                }
+            }
+            if (!siblings.isEmpty()) {
+
+                for (Integer depNodeID : siblings) {
+                    String depToken = state.getDocument().getParse().getToken(depNodeID);
+                    String depURI = state.getHiddenVariables().get(depNodeID).getCandidate().getUri();
+                    Integer depDudeID = state.getHiddenVariables().get(depNodeID).getDudeId();
+                    String depDudeName = "EMPTY";
+                    if (depDudeID != -1) {
+                        depDudeName = semanticTypes.get(depDudeID);
+                    }
+
+                    if (!depURI.equals("EMPTY_STRING")) {
+                        featureVector.addToValue("LEXICAL SIBLING FEATURE: HEAD_URI: " + headURI + " HEAD_TOKEN: " + headToken + " SEM-TYPE: " + dudeName + " CHILD_URI: " + depURI + " CHILD_TOKEN: " + depToken+ " SIBLING-SEM-TYPE: "+depDudeName, 1.0);
                     }
                 }
             }
