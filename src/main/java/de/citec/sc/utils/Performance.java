@@ -123,9 +123,11 @@ public class Performance {
         FileFactory.writeListToFile(outputDir+"/parsedInstances_" + fileName + ".txt", correctInstances, false);
         FileFactory.writeListToFile(outputDir+"/unParsedInstances_" + fileName + ".txt", inCorrectInstances, false);
         
+        double correct = c/(double)testResults.size();
+        double inCorrect = (testResults.size() - c)/(double)testResults.size();
         
-        System.out.println("Test results\n\nCorrectly predicted: "+c + "/" + testResults.size());
-        System.out.println("Incorrectly predicted: "+(testResults.size() - c) + "/" + testResults.size());
+        System.out.println("Test results\n\nCorrect predictions: "+c + "/" + testResults.size() + " = "+correct);
+        System.out.println("Incorrect predictions: "+(testResults.size() - c) + "/" + testResults.size()+" = "+inCorrect);
         System.out.println("MACRO F1: "+ MACROF1);
     }
 

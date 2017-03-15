@@ -2,6 +2,9 @@ package de.citec.sc.main;
 
 import de.citec.sc.corpus.AnnotatedDocument;
 import de.citec.sc.corpus.QALDCorpus;
+import de.citec.sc.dudes.rdf.ExpressionFactory;
+import de.citec.sc.dudes.rdf.RDFDUDES;
+import de.citec.sc.learning.QueryConstructor;
 import de.citec.sc.qald.QALDCorpusLoader;
 import de.citec.sc.query.CandidateRetriever;
 import de.citec.sc.query.CandidateRetrieverOnLucene;
@@ -13,6 +16,7 @@ import de.citec.sc.utils.ProjectConfiguration;
 import de.citec.sc.wordNet.WordNetAnalyzer;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -36,23 +40,23 @@ public class Main {
 
             args = new String[20];
             args[0] = "-d1";//query dataset
-            args[1] = "qald6Train";//qald6Train  qald6Test   qaldSubset
+            args[1] = "qaldSubset";//qald6Train  qald6Test   qaldSubset
             args[2] = "-d2";  //test dataset
-            args[3] = "qald6Train";//qald6Train  qald6Test   qaldSubset
+            args[3] = "qaldSubset";//qald6Train  qald6Test   qaldSubset
             args[4] = "-m1";//manual lexicon
             args[5] = "true";//true, false
             args[6] = "-m2";//matoll
             args[7] = "true";//true, false
             args[8] = "-e";//epochs
-            args[9] = "" + 4;
+            args[9] = "" + 1;
             args[10] = "-s";//sampling steps
-            args[11] = "" + 3;
+            args[11] = "" + 15;
             args[12] = "-k";//top k samples to select from during training
-            args[13] = "" + 3;
+            args[13] = "" + 1;
             args[14] = "-l";//top k samples to select from during testing
-            args[15] = "" + 3;
+            args[15] = "" + 5;
             args[16] = "-w";//max word count
-            args[17] = "" + 3;
+            args[17] = "" + 30;
             args[18] = "-t";//task name
             args[19] = "linking";//qa, linking
         }
@@ -71,7 +75,7 @@ public class Main {
             Model trainedModel = Pipeline.train(trainDocuments);
 
 //            trainedModel.saveModelToFile("models", "model");
-            Pipeline.test(trainedModel, testDocuments);
+//            Pipeline.test(trainedModel, testDocuments);
 //            Pipeline.test("models/model", trainDocuments);
         } catch (Exception ex) {
             java.util.logging.Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
@@ -90,18 +94,19 @@ public class Main {
 
         ManualLexicon.useManualLexicon(ProjectConfiguration.useManualLexicon());
 
+        //semantic types to sample from
         Map<Integer, String> semanticTypes = new LinkedHashMap<>();
-
         semanticTypes.put(1, "Property");
         semanticTypes.put(2, "Individual");
         semanticTypes.put(3, "Class");
         semanticTypes.put(4, "RestrictionClass");
-//        semanticTypes.put(5, "UnderSpecifiedClass");
-
+        
+       
+        //semantic types with special meaning
         Map<Integer, String> specialSemanticTypes = new LinkedHashMap<>();
+        specialSemanticTypes.put(semanticTypes.size()+1, "What");//it should be higher than semantic type size
+        
 
-        specialSemanticTypes.put(1, "Who");
-        specialSemanticTypes.put(2, "Which");
 
         Set<String> validPOSTags = new HashSet<>();
         validPOSTags.add("NN");
@@ -131,8 +136,21 @@ public class Main {
         frequentWordsToExclude.add("me");
         frequentWordsToExclude.add("many");
         frequentWordsToExclude.add("have");
+        frequentWordsToExclude.add("belong");
+        
+        //these words can have special semantic type
+        Set<String> wordsWithSpecialSemanticTypes = new HashSet<>();
+        wordsWithSpecialSemanticTypes.add("which");
+        wordsWithSpecialSemanticTypes.add("what");
+        wordsWithSpecialSemanticTypes.add("who");
+        wordsWithSpecialSemanticTypes.add("whom");
+        wordsWithSpecialSemanticTypes.add("how");
+        wordsWithSpecialSemanticTypes.add("when");
+        wordsWithSpecialSemanticTypes.add("where");
 
         Pipeline.initialize(validPOSTags, semanticTypes, specialSemanticTypes, frequentWordsToExclude);
+        
+        QueryConstructor.initialize(specialSemanticTypes, semanticTypes, validPOSTags, frequentWordsToExclude);
     }
 
     private static List<AnnotatedDocument> getDocuments(QALDCorpusLoader.Dataset dataset) {

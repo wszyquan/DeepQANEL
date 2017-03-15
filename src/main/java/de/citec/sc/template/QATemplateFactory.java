@@ -21,11 +21,13 @@ import templates.TemplateFactory;
 public class QATemplateFactory implements TemplateFactory<AnnotatedDocument, State> {
 
     private static Set<String> validPOSTags;
+    private static Set<String> frequentWordsToExclude;
     private static Map<Integer, String> semanticTypes;
 
-    public static void initialize(Set<String> v, Map<Integer, String> s) {
+    public static void initialize(Set<String> v, Set<String> f, Map<Integer, String> s) {
         validPOSTags = v;
         semanticTypes = s;
+        frequentWordsToExclude = f;
     }
 
     @Override
@@ -35,7 +37,7 @@ public class QATemplateFactory implements TemplateFactory<AnnotatedDocument, Sta
             case "NodeSimilarityTemplate":
                 return new NodeSimilarityTemplate();
             case "LexicalTemplate":
-                return new LexicalTemplate(validPOSTags, semanticTypes);
+                return new LexicalTemplate(validPOSTags, frequentWordsToExclude, semanticTypes);
             case "ResourceTemplate":
                 return new ResourceTemplate(validPOSTags, semanticTypes);
             case "PropertyTemplate":

@@ -27,7 +27,7 @@ public class AnalyseTrainingDocuments {
         analysePOSTAGs();
     }
 
-    private static void analysePOSTAGs(){
+    private static void analysePOSTAGs() {
         CandidateRetriever retriever = new CandidateRetrieverOnLucene(true, "luceneIndexes/resourceIndex", "luceneIndexes/classIndex", "luceneIndexes/predicateIndex", "luceneIndexes/matollIndex");
 
         WordNetAnalyzer wordNet = new WordNetAnalyzer("src/main/resources/WordNet-3.0/dict");
@@ -42,75 +42,87 @@ public class AnalyseTrainingDocuments {
         boolean onlyDBO = true;
         boolean isHybrid = false;
 
-        QALDCorpus trainCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qaldSubset, includeYAGO, includeAggregation, includeUNION, onlyDBO, isHybrid);
-        QALDCorpus testCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qaldSubset, includeYAGO, includeAggregation, includeUNION, onlyDBO, isHybrid);
+        QALDCorpus trainCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qald6Train, includeYAGO, includeAggregation, includeUNION, onlyDBO, isHybrid);
+        QALDCorpus testCorpus = QALDCorpusLoader.load(QALDCorpusLoader.Dataset.qald6Test, includeYAGO, includeAggregation, includeUNION, onlyDBO, isHybrid);
 
-         List<AnnotatedDocument> trainDocuments = trainCorpus.getDocuments();
+        List<AnnotatedDocument> trainDocuments = trainCorpus.getDocuments();
         List<AnnotatedDocument> testDocuments = testCorpus.getDocuments();
-        
+
         trainDocuments.addAll(testDocuments);
 
         int c = 0;
-        Set<String> postags = new HashSet<>();
-        
-        HashMap<String, List<String>> postagMAP = new LinkedHashMap<>();
-        
-        HashMap<String, Integer> frequentWords = new HashMap<>();
-        
+
+        HashMap<String, HashMap<String, Integer>> postagMAP = new LinkedHashMap<>();
+
+
         for (AnnotatedDocument d : trainDocuments) {
-            
+
             String before = d.toString();
             d.getParse().mergeEdges();
             String after = d.toString();
-            
-            System.out.println(d);
 
+//            System.out.println(d);
             for (Integer node : d.getParse().getNodes().keySet()) {
 
                 String pos = d.getParse().getPOSTag(node);
-                
+
                 String token = d.getParse().getToken(node);
                 token = token.toLowerCase();
-                
-                frequentWords.put(token, frequentWords.getOrDefault(token, 1) +1);
 
-                if (pos.startsWith("NN") || pos.startsWith("JJ") || pos.startsWith("VB")) {
-                    postags.add(pos);
-                    
-                    
-                    if(postagMAP.containsKey(pos)){
-                        List<String> values = postagMAP.get(pos);
-                        values.add(d.getParse().getToken(node));
-                        postagMAP.put(pos, values);
-                    }
-                    else{
-                        List<String> values = new ArrayList<>();
-                        values.add(d.getParse().getToken(node));
-                        postagMAP.put(pos, values);
-                    }
-                    
-                    
+                
+
+//                if (pos.startsWith("NN") || pos.startsWith("JJ") || pos.startsWith("VB")) {
+                
+
+                if (postagMAP.containsKey(pos)) {
+                    HashMap<String, Integer> values = postagMAP.get(pos);
+                    values.put(token, values.getOrDefault(token, 1) + 1);
+                    postagMAP.put(pos, values);
+                } else {
+                    HashMap<String, Integer> values = new HashMap<>();
+                    values.put(token, 1);
+
+                    postagMAP.put(pos, values);
+                }
+
+//                }
+            }
+        }
+
+        for (String pos : postagMAP.keySet()) {
+            if (pos.startsWith("NN") || pos.startsWith("JJ") || pos.startsWith("VB")) {
+                continue;
+            }
+            System.out.println("POS: " + pos);
+
+            HashMap<String, Integer> map = postagMAP.get(pos);
+            map = SortUtils.sortByValue(map);
+
+            int count = 0;
+            for (String s : map.keySet()) {
+                if (count >= 5) {
+                    break;
+                }
+                if (map.get(s) > 0) {
+                    System.out.print(s + " : " + map.get(s) + " -- ");
+                    count++;
                 }
             }
-        }
-        
-        
-        for(String pos : postagMAP.keySet()){
-            System.out.println(pos+" -- "+postagMAP.get(pos));
-        }
-        
-        System.out.println("POSTAGS: " + postags);
-        
-        frequentWords = SortUtils.sortByValue(frequentWords);
-        
-        for(String w : frequentWords.keySet()){
-            if(frequentWords.get(w) > 3){
-                System.out.println("Word: " +w + "  Freq: " + frequentWords.get(w));
-            }
+
+            System.out.println("============================\n");
         }
 
-        
+//        System.out.println("POSTAGS: " + postags);
+//        
+//        frequentWords = SortUtils.sortByValue(frequentWords);
+//        
+//        for(String w : frequentWords.keySet()){
+//            if(frequentWords.get(w) > 3){
+//                System.out.println("Word: " +w + "  Freq: " + frequentWords.get(w));
+//            }
+//        }
     }
+
     private static void analyseDependency() {
         CandidateRetriever retriever = new CandidateRetrieverOnLucene(true, "luceneIndexes/resourceIndex", "luceneIndexes/classIndex", "luceneIndexes/predicateIndex", "luceneIndexes/matollIndex");
 

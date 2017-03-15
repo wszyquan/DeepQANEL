@@ -5,27 +5,27 @@
  */
 package de.citec.sc.utils;
 
-import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryExecution;
-import com.hp.hpl.jena.query.QueryExecutionFactory;
-import com.hp.hpl.jena.query.QueryFactory;
-import com.hp.hpl.jena.query.QuerySolution;
-import com.hp.hpl.jena.query.ResultSet;
-import com.hp.hpl.jena.rdf.model.RDFNode;
-import com.hp.hpl.jena.sparql.engine.http.QueryEngineHTTP;
+
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
-import variables.AbstractState;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryExecution;
+import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.query.QuerySolution;
+import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.sparql.engine.http.QueryEngineHTTP;
 
 /**
  *
  * @author sherzod
  */
-public class DBpediaEndpoint{
+public class DBpediaEndpoint {
 
     private static String endpointURL = "http://purpur-v11:8890/sparql";
     private static boolean isRemote = false;
@@ -34,8 +34,12 @@ public class DBpediaEndpoint{
     private static HashMap<String, Boolean> cacheOfQueries = new HashMap<>();
     private static HashMap<String, Boolean> cacheOfDomains = new HashMap<>();
     private static HashMap<String, Boolean> cacheOfRanges = new HashMap<>();
-    
-    public static enum AnswerType{Date, String, URI};
+    private static HashMap<String, Boolean> cacheOfDependentNodes = new HashMap<>();
+
+    public static enum AnswerType {
+
+        Date, String, URI
+    };
 
     public static void setToRemote() {
         endpointURL = "http://dbpedia.org/sparql";
@@ -57,24 +61,159 @@ public class DBpediaEndpoint{
 
         return query;
     }
-    
-    
-    public static boolean isObjectTriple(String headURI, String depURI) {
-        String query1 = "SELECT DISTINCT ?o WHERE { ?o <" + headURI + "> <" + depURI + "> . }";
-        //if the resourceURI should be in subject position
 
-        boolean isObject = DBpediaEndpoint.isValidQuery(query1, true);
+    public static boolean isObjectTriple(String headURI, String depURI) {
+        if (cacheOfDependentNodes.containsKey(headURI + "==" + depURI + "Object")) {
+            return cacheOfDependentNodes.get(headURI + "==" + depURI + "Object");
+        }
+
+        String property = "";
+        String resource = "";
+        String classResourcePart = "";
+        String classPropertyPart = "";
+
+        String query = "";
+        if (isProperty(depURI) && isProperty(headURI)) {
+            property = "?x <" + headURI + "> ?y. ?z <" + depURI + "> ?y.";
+
+            query = "SELECT DISTINCT ?y WHERE { " + property + " }";
+        } else if (isProperty(depURI) && isResource(headURI)) {
+            property = depURI;
+            resource = headURI;
+
+            query = "SELECT DISTINCT ?s WHERE { ?s <" + property + "> <" + resource + ">. }";
+        } else if (isProperty(headURI) && isResource(depURI)) {
+            property = headURI;
+            resource = depURI;
+
+            query = "SELECT DISTINCT ?s WHERE { ?s <" + property + "> <" + resource + ">. }";
+        } else if (isClass(headURI) && isResource(depURI)) {
+            classPropertyPart = headURI.substring(0, headURI.indexOf("###"));
+            classResourcePart = headURI.replace(classPropertyPart + "###", "");
+
+            resource = depURI;
+
+            query = "SELECT DISTINCT ?s WHERE { ?s ?p <" + resource + ">. ?s <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(depURI) && isResource(headURI)) {
+            classPropertyPart = depURI.substring(0, depURI.indexOf("###"));
+            classResourcePart = depURI.replace(classPropertyPart + "###", "");
+
+            resource = headURI;
+
+            query = "SELECT DISTINCT ?s WHERE { ?s ?p <" + resource + ">. ?s <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(headURI) && isProperty(depURI)) {
+            classPropertyPart = headURI.substring(0, headURI.indexOf("###"));
+            classResourcePart = headURI.replace(classPropertyPart + "###", "");
+
+            property = depURI;
+
+            query = "SELECT DISTINCT ?s WHERE { ?s <" + property + "> ?o. ?o <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(depURI) && isProperty(headURI)) {
+            classPropertyPart = depURI.substring(0, depURI.indexOf("###"));
+            classResourcePart = depURI.replace(classPropertyPart + "###", "");
+
+            property = headURI;
+
+            query = "SELECT DISTINCT ?s WHERE { ?s <" + property + "> ?o. ?o <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        }
+
+        boolean isObject = DBpediaEndpoint.isValidQuery(query, true);
+
+        cacheOfDependentNodes.put(headURI + "==" + depURI + "Object", isObject);
 
         return isObject;
     }
-    
-    public static boolean isSubjectTriple(String headURI, String depURI) {
-        String query1 = "SELECT DISTINCT ?o WHERE { <" + depURI + "> <" + headURI + "> ?o . }";
-        //if the resourceURI should be in subject position
 
-        boolean isSubject = DBpediaEndpoint.isValidQuery(query1, true);
+    public static boolean isSubjectTriple(String headURI, String depURI) {
+
+        if (cacheOfDependentNodes.containsKey(headURI + "==" + depURI + "Subject")) {
+            return cacheOfDependentNodes.get(headURI + "==" + depURI + "Subject");
+        }
+
+        String property = "";
+        String resource = "";
+        String classResourcePart = "";
+        String classPropertyPart = "";
+
+        String query = "";
+        if (isProperty(headURI) && isProperty(depURI)) {
+            property = "?x <" + headURI + "> ?y. ?x <" + depURI + "> ?t.";
+
+            query = "SELECT DISTINCT ?x WHERE { " + property + " }";
+        } else if (isProperty(depURI) && isResource(headURI)) {
+            property = depURI;
+            resource = headURI;
+
+            query = "SELECT DISTINCT ?o WHERE { <" + resource + "> <" + property + "> ?o. }";
+        } else if (isProperty(headURI) && isResource(depURI)) {
+            property = headURI;
+            resource = depURI;
+
+            query = "SELECT DISTINCT ?o WHERE { <" + resource + "> <" + property + "> ?o. }";
+        } else if (isClass(headURI) && isResource(depURI)) {
+            classPropertyPart = headURI.substring(0, headURI.indexOf("###"));
+            classResourcePart = headURI.replace(classPropertyPart + "###", "");
+
+            resource = depURI;
+
+            query = "SELECT DISTINCT ?o WHERE { <" + resource + "> ?p ?o. ?o <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(depURI) && isResource(headURI)) {
+            classPropertyPart = depURI.substring(0, depURI.indexOf("###"));
+            classResourcePart = depURI.replace(classPropertyPart + "###", "");
+
+            resource = headURI;
+
+            query = "SELECT DISTINCT ?o WHERE { <" + resource + "> ?p ?o. ?o <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(headURI) && isProperty(depURI)) {
+            classPropertyPart = headURI.substring(0, headURI.indexOf("###"));
+            classResourcePart = headURI.replace(classPropertyPart + "###", "");
+
+            property = depURI;
+
+            query = "SELECT DISTINCT ?o WHERE { ?s <" + property + "> ?o. ?s <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(depURI) && isProperty(headURI)) {
+            classPropertyPart = depURI.substring(0, depURI.indexOf("###"));
+            classResourcePart = depURI.replace(classPropertyPart + "###", "");
+
+            property = headURI;
+
+            query = "SELECT DISTINCT ?o WHERE { ?s <" + property + "> ?o. ?s <" + classPropertyPart + "> <" + classResourcePart + ">. }";
+        } else if (isClass(depURI) && isClass(headURI)) {
+            classPropertyPart = depURI.substring(0, depURI.indexOf("###"));
+            classResourcePart = depURI.replace(classPropertyPart + "###", "");
+
+            String classPropertyPart2 = headURI.substring(0, headURI.indexOf("###"));
+            String classResourcePart2 = headURI.replace(classPropertyPart2 + "###", "");
+
+            query = "SELECT DISTINCT ?s WHERE { ?s <" + classPropertyPart + "> <" + classResourcePart + ">. ?s <" + classPropertyPart2 + "> <" + classResourcePart2 + ">. }";
+        }
+
+        boolean isSubject = DBpediaEndpoint.isValidQuery(query, true);
+
+        cacheOfDependentNodes.put(headURI + "==" + depURI + "Subject", isSubject);
 
         return isSubject;
+    }
+
+    private static boolean isClass(String uri) {
+        if (uri.contains("###")) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isProperty(String uri) {
+        if ((uri.startsWith("http://dbpedia.org/ontology/") || uri.startsWith("http://dbpedia.org/property/")) && !uri.contains("###")) {
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean isResource(String uri) {
+        if (uri.startsWith("http://dbpedia.org/resource/")) {
+            return true;
+        }
+        return false;
     }
 
     public static String getNormalizedQuery(String query) {
@@ -88,17 +227,17 @@ public class DBpediaEndpoint{
 
         return query;
     }
-    
-    public static AnswerType getAnswertype(String query){
+
+    public static AnswerType getAnswertype(String query) {
         List<String> result = runQuery(query);
-        
-        if(!result.isEmpty()){
+
+        if (!result.isEmpty()) {
             return checkAnswerType(result.get(0));
         }
-        
+
         return AnswerType.URI;
     }
-    
+
     private static AnswerType checkAnswerType(String token) {
         List<String> datePatterns = new ArrayList<>();
 
@@ -116,23 +255,23 @@ public class DBpediaEndpoint{
 
         datePatterns.add(monthYearPattern);
         datePatterns.add(datePattern);
-        
+
         for (String pattern : datePatterns) {
             if (token.matches(pattern)) {
                 return AnswerType.Date;
             }
         }
-        
+
         List<String> uriPatterns = new ArrayList<>();
-        
+
         uriPatterns.add("^(http://|https://)+.+$");
-        
+
         for (String pattern : uriPatterns) {
             if (token.matches(pattern)) {
                 return AnswerType.URI;
             }
         }
-        
+
         return AnswerType.String;
     }
 
@@ -315,12 +454,12 @@ public class DBpediaEndpoint{
 
                 if (!results.isEmpty()) {
                     cacheOfQueries.put(query, true);
-                    
+
                     isValid = true;
-                    
+
                 } else {
                     cacheOfQueries.put(query, false);
-                    
+
                     isValid = false;
                 }
                 //update canonicalForm Map
@@ -335,11 +474,11 @@ public class DBpediaEndpoint{
 
             if (!results.isEmpty()) {
                 cacheOfQueries.put(query, true);
-                
+
                 isValid = true;
             } else {
                 cacheOfQueries.put(query, false);
-                
+
                 isValid = false;
             }
 

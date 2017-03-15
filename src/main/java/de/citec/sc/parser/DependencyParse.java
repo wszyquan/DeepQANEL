@@ -43,7 +43,6 @@ public class DependencyParse {
         mergeCompountEdges();
 
 //        System.out.println("After compound\n\n" + toString()+"\n");
-        
         mergeAmodEdges();
 
 //        System.out.println("After mergeAmodEdges\n\n" + toString()+"\n");
@@ -53,7 +52,6 @@ public class DependencyParse {
         mergeDetEdges();
 
 //        System.out.println("After mergeDetEdges\n\n" + toString()+"\n");
-        
         mergePatterns();
 
 //        System.out.println("After mergePatterns\n\n" + toString()+"\n");
@@ -67,6 +65,7 @@ public class DependencyParse {
         patterns.add("NNP CC NNP");//Lawrence (NNP) 		7,of (IN) 		8,Arabia (NNP)
 //        patterns.add("NNS IN NNP");//Houses (NNP) 		7,of (IN) 		8,Parliament (NNP)
         patterns.add("NN IN NNS");//nobel prize (NN) 		7,of (IN) 		8,physics (NNS)
+        patterns.add("NNP CD");//7,Chile Route (NNP) 		8,68 (CD) 
 
         List<Integer> allNodes = new ArrayList<>();
         allNodes.addAll(nodes.keySet());
@@ -76,40 +75,45 @@ public class DependencyParse {
 
         for (int i = 0; i < allNodes.size(); i++) {
 
-            if (i + 2 < allNodes.size()) {
-                List<Integer> mergedNodes = allNodes.subList(i, i + 3);
-                String postags = "";
-                String mergedTokens = "";
-                for (Integer m : mergedNodes) {
-                    postags += POSTAG.get(m) + " ";
-                    mergedTokens += getToken(m) + " ";
-                }
-                postags = postags.trim();
-                mergedTokens = mergedTokens.trim();
-
-                if (patterns.contains(postags)) {
-
-                    if (mergedTokens.isEmpty()) {
-                        continue;
+            //get 1,2 token
+            for (int r = 1; r <= 2; r++) {
+                
+                if (i + r < allNodes.size()) {
+                    
+                    List<Integer> mergedNodes = allNodes.subList(i, i + r+1);
+                    String postags = "";
+                    String mergedTokens = "";
+                    for (Integer m : mergedNodes) {
+                        postags += POSTAG.get(m) + " ";
+                        mergedTokens += getToken(m) + " ";
                     }
-                    boolean b = Search.matches(mergedTokens.toUpperCase());
+                    postags = postags.trim();
+                    mergedTokens = mergedTokens.trim();
 
-                    //if matches then remove nodes
-                    if (b) {
+                    if (patterns.contains(postags)) {
 
-                        for (Integer depNode : mergedNodes) {
-                            if (depNode == allNodes.get(i)) {
-                                continue;
+                        if (mergedTokens.isEmpty()) {
+                            continue;
+                        }
+                        boolean b = Search.matches(mergedTokens.toLowerCase());
+
+                        //if matches then remove nodes
+                        if (b) {
+
+                            for (Integer depNode : mergedNodes) {
+                                if (depNode == allNodes.get(i)) {
+                                    continue;
+                                }
+
+                                edgeStrings.remove(depNode);
+                                relations.remove(depNode);
+                                nodes.remove(depNode);
+                                POSTAG.remove(depNode);
                             }
 
-                            edgeStrings.remove(depNode);
-                            relations.remove(depNode);
-                            nodes.remove(depNode);
-                            POSTAG.remove(depNode);
+                            POSTAG.put(allNodes.get(i), "NNP");
+                            nodes.put(allNodes.get(i), mergedTokens);
                         }
-
-                        POSTAG.put(allNodes.get(i), "NNP");
-                        nodes.put(allNodes.get(i), mergedTokens);
                     }
                 }
             }
@@ -492,8 +496,7 @@ public class DependencyParse {
                         case "NNP":
                             if (depPOS.equals("NNP") || depPOS.equals("NNPS")) {
                                 isValidMerge = true;
-                            }
-                            else if (depPOS.equals("NN") || depPOS.equals("NNS")) {
+                            } else if (depPOS.equals("NN") || depPOS.equals("NNS")) {
                                 isValidMerge = true;
                             }
                             break;
@@ -588,9 +591,7 @@ public class DependencyParse {
             if (mergedTokens.isEmpty()) {
                 continue;
             }
-            
-            
-            
+
             nodes.put(headNode, mergedTokens);
 
         }
@@ -675,13 +676,13 @@ public class DependencyParse {
     }
 
     /**
-     * returns dependent edges given the headNode
+     * returns dependent edges given the headNode that have a valid postag
      *
      * @param headNode
-     * @param acceptedPOSTAGs
+     * @param acceptedPOSTAGs set of postags
      * @return List of dependent nodes
      */
-    public List<Integer> getDependentEdgesWithCertainPOSTAG(int headNode, Set<String> acceptedPOSTAGs) {
+    public List<Integer> getDependentEdges(int headNode, Set<String> acceptedPOSTAGs, Set<String> frequentWordsToExclude) {
 
         List<Integer> list = new ArrayList<>();
         for (Integer k : relations.keySet()) {
@@ -690,9 +691,18 @@ public class DependencyParse {
             if (v == headNode) {
                 String postag = getPOSTag(k);
 
-                if (acceptedPOSTAGs.contains(postag)) {
-                    list.add(k);
+                if (!acceptedPOSTAGs.contains(postag)) {
+                    continue;
                 }
+
+                String token = getToken(k);
+
+                if (frequentWordsToExclude.contains(token.toLowerCase())) {
+                    continue;
+                }
+
+                list.add(k);
+
             }
         }
 
@@ -700,12 +710,13 @@ public class DependencyParse {
     }
 
     /**
-     * returns dependent edges given the headNode
+     * returns sibling edges of given the headNode if the postag of that is in
+     * acceptedPOSTAGs
      *
      * @param headNode
-     * @return List of dependent nodes
+     * @return List of sibling nodes
      */
-    public List<Integer> getSiblingsWithCertainPOSTAG(int nodeId, Set<String> acceptedPOSTAGs) {
+    public List<Integer> getSiblings(int nodeId, Set<String> acceptedPOSTAGs, Set<String> frequentWordsToExclude) {
 
         List<Integer> list = new ArrayList<>();
 
@@ -715,14 +726,23 @@ public class DependencyParse {
             List<Integer> allChildren = getDependentEdges(parentNode);
 
             for (Integer s : allChildren) {
+
                 String postag = getPOSTag(s);
 
-                if (acceptedPOSTAGs.contains(postag)) {
-
-                    if (!s.equals(nodeId)) {
-                        list.add(s);
-                    }
+                if (!acceptedPOSTAGs.contains(postag)) {
+                    continue;
                 }
+
+                String token = getToken(s);
+
+                if (frequentWordsToExclude.contains(token.toLowerCase())) {
+                    continue;
+                }
+
+                if (!s.equals(nodeId)) {
+                    list.add(s);
+                }
+
             }
         }
 

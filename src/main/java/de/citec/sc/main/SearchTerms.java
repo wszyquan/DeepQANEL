@@ -26,7 +26,7 @@ public class SearchTerms {
 
         Search.load();
 
-        String word = "soundtrack";
+        String word = "Chile Route 68";
         int topK = 100;
         boolean lemmatize = true;
         boolean useWordNet = false;

@@ -26,13 +26,13 @@ import templates.AbstractTemplate;
  *
  * @author sherzod
  */
-public class LexicalTemplate extends AbstractTemplate<AnnotatedDocument, State, StateFactorScope<State>> {
+public class SimilarityTemplate extends AbstractTemplate<AnnotatedDocument, State, StateFactorScope<State>> {
 
     private Set<String> validPOSTags;
     private Set<String> frequentWordsToExclude;
     private Map<Integer, String> semanticTypes;
 
-    public LexicalTemplate(Set<String> validPOSTags, Set<String> frequentWordsToExclude, Map<Integer, String> s) {
+    public SimilarityTemplate(Set<String> validPOSTags, Set<String> frequentWordsToExclude, Map<Integer, String> s) {
         this.validPOSTags = validPOSTags;
         this.semanticTypes = s;
         this.frequentWordsToExclude = frequentWordsToExclude;
@@ -72,17 +72,10 @@ public class LexicalTemplate extends AbstractTemplate<AnnotatedDocument, State, 
             if (headURI.equals("EMPTY_STRING")) {
                 continue;
             }
-            if (headURI.equals("EMPTY_STRING") && validPOSTags.contains(headPOS)) {
-                featureVector.addToValue("LEXICAL FEATURE:  EXCLUDE THIS WORD: URI: " + headURI + " TOKEN: " + headToken + " POS : " + headPOS, 1.0);
-            }
+            
 
             List<Integer> dependentNodes = state.getDocument().getParse().getDependentEdges(tokenID, validPOSTags, frequentWordsToExclude);
             List<Integer> siblings = state.getDocument().getParse().getSiblings(tokenID, validPOSTags, frequentWordsToExclude);
-
-            //add lexical feature only for nouns, noun phrases etc.
-            if (dependentNodes.isEmpty() && (headPOS.startsWith("NN") || headPOS.startsWith("JJ"))) {
-                featureVector.addToValue("LEXICAL FEATURE: URI: " + headURI + " TOKEN: " + headToken + " POS : " + headPOS + " SEM-TYPE: " + dudeName, 1.0);
-            }
 
             if (!dependentNodes.isEmpty()) {
 

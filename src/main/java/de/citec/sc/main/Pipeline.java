@@ -11,6 +11,7 @@ import de.citec.sc.corpus.SampledMultipleInstance;
 import de.citec.sc.learning.LinkingObjectiveFunction;
 import de.citec.sc.learning.NELHybridSamplingStrategyCallback;
 import de.citec.sc.learning.NELTrainer;
+import de.citec.sc.sampling.DependentNodeExplorer;
 import de.citec.sc.sampling.MyBeamSearchSampler;
 import de.citec.sc.sampling.SingleNodeExplorer;
 import de.citec.sc.sampling.StateInitializer;
@@ -58,12 +59,12 @@ public class Pipeline {
         semanticTypes = s;
         specialSemanticTypes = st;
         frequentWordsToExclude = f;
-        
+
         NUMBER_OF_SAMPLING_STEPS = ProjectConfiguration.getNumberOfSamplingSteps();
         NUMBER_OF_EPOCHS = ProjectConfiguration.getNumberOfEpochs();
         BEAM_SIZE_TRAINING = ProjectConfiguration.getTrainingBeamSize();
         BEAM_SIZE_TEST = ProjectConfiguration.getTestBeamSize();
-        
+
     }
 
     public static Model<AnnotatedDocument, State> train(List<AnnotatedDocument> trainingDocuments) {
@@ -82,7 +83,7 @@ public class Pipeline {
         List<AbstractTemplate<AnnotatedDocument, State, ?>> templates = new ArrayList<>();
 //        templates.add(new ResourceTemplate(validPOSTags, semanticTypes));
 //        templates.add(new PropertyTemplate(validPOSTags, semanticTypes));
-        templates.add(new LexicalTemplate(validPOSTags, semanticTypes));
+        templates.add(new LexicalTemplate(validPOSTags, frequentWordsToExclude, semanticTypes));
 
         /*
          * Create the scorer object that computes a score from the factors'
@@ -106,7 +107,8 @@ public class Pipeline {
          * successor state and, thus, perform the sampling procedure.
          */
         List<Explorer<State>> explorers = new ArrayList<>();
-        explorers.add(new SingleNodeExplorer(semanticTypes, frequentWordsToExclude, validPOSTags));
+//        explorers.add(new SingleNodeExplorer(semanticTypes, frequentWordsToExclude, validPOSTags));
+        explorers.add(new DependentNodeExplorer(semanticTypes, validPOSTags, frequentWordsToExclude));
         /*
          * Create a sampler that generates sampling chains with which it will
          * trigger weight updates during training.
@@ -117,12 +119,32 @@ public class Pipeline {
          * too small, the sampler can not reach the optimal solution. Large
          * values, however, increase computation time.
          */
-//        StoppingCriterion<State> stoppingCriterion2 = new StepLimitCriterion<>(NUMBER_OF_SAMPLING_STEPS);
-        BeamSearchStoppingCriterion<State> stoppingCriterion = new BeamSearchStoppingCriterion<State>() {
+        BeamSearchStoppingCriterion<State> scoreStoppingCriterion = new BeamSearchStoppingCriterion<State>() {
 
             @Override
             public boolean checkCondition(List<List<State>> chain, int step) {
-                return chain.size() >= NUMBER_OF_SAMPLING_STEPS;
+
+                List<State> lastStates = chain.get(chain.size() - 1);
+                State s = (State) lastStates.get(lastStates.size() - 1);
+
+                double maxScore = s.getObjectiveScore();
+
+                if (maxScore == 1.0) {
+                    return true;
+                }
+
+                int count = 0;
+                final int maxCount = 4;
+
+                for (int i = chain.size() - 1; i >= 0; i--) {
+                    List<State> chainStates = chain.get(i);
+                    State maxState = (State) chainStates.get(chainStates.size() - 1);
+
+                    if (maxState.getObjectiveScore() >= maxScore) {
+                        count++;
+                    }
+                }
+                return count >= maxCount || chain.size() >= NUMBER_OF_SAMPLING_STEPS;
             }
         };
 
@@ -130,7 +152,7 @@ public class Pipeline {
          * 
          */
         MyBeamSearchSampler<AnnotatedDocument, State, String> sampler = new MyBeamSearchSampler<>(model, objective, explorers,
-                stoppingCriterion);
+                scoreStoppingCriterion);
         sampler.setTrainSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategyByObjective(BEAM_SIZE_TRAINING, s -> s.getObjectiveScore()));
         sampler.setTrainAcceptStrategy(AcceptStrategies.strictObjectiveAccept());
 
@@ -159,12 +181,10 @@ public class Pipeline {
         List<SampledMultipleInstance<AnnotatedDocument, String, State>> trainResults = trainer.train(sampler, initializer, learner, trainingDocuments, i -> i.getGoldQueryString(), NUMBER_OF_EPOCHS);
 
         System.out.println(model.toDetailedString());
-        
+
         //log the parsing coverage
-        
         Performance.logTrain();
-        
-        
+
         return model;
     }
 
@@ -184,12 +204,12 @@ public class Pipeline {
         List<AbstractTemplate<AnnotatedDocument, State, ?>> templates = new ArrayList<>();
 //        templates.add(new ResourceTemplate(validPOSTags, semanticTypes));
 //        templates.add(new PropertyTemplate(validPOSTags, semanticTypes));
-        templates.add(new LexicalTemplate(validPOSTags, semanticTypes));
+        templates.add(new LexicalTemplate(validPOSTags, frequentWordsToExclude, semanticTypes));
 
         /*
          * initialize QATemplateFactory
          */
-        QATemplateFactory.initialize(validPOSTags, semanticTypes);
+        QATemplateFactory.initialize(validPOSTags, frequentWordsToExclude, semanticTypes);
 
         /*
          * Create an Initializer that is responsible for providing an initial
@@ -204,7 +224,8 @@ public class Pipeline {
          * successor state and, thus, perform the sampling procedure.
          */
         List<Explorer<State>> explorers = new ArrayList<>();
-        explorers.add(new SingleNodeExplorer(semanticTypes, frequentWordsToExclude, validPOSTags));
+//        explorers.add(new SingleNodeExplorer(semanticTypes, frequentWordsToExclude, validPOSTags));
+        explorers.add(new DependentNodeExplorer(semanticTypes, validPOSTags, frequentWordsToExclude));
         /*
          * Create a sampler that generates sampling chains with which it will
          * trigger weight updates during training.
@@ -215,11 +236,29 @@ public class Pipeline {
          * too small, the sampler can not reach the optimal solution. Large
          * values, however, increase computation time.
          */
-        BeamSearchStoppingCriterion<State> stoppingCriterion = new BeamSearchStoppingCriterion<State>() {
+        BeamSearchStoppingCriterion<State> scoreStoppingCriterion = new BeamSearchStoppingCriterion<State>() {
 
             @Override
             public boolean checkCondition(List<List<State>> chain, int step) {
-                return chain.size() >= NUMBER_OF_SAMPLING_STEPS;
+
+                List<State> lastStates = chain.get(chain.size() - 1);
+                State s = (State) lastStates.get(lastStates.size() - 1);
+
+                double maxScore = s.getModelScore();
+
+
+                int count = 0;
+                final int maxCount = 4;
+
+                for (int i = chain.size() - 1; i >= 0; i--) {
+                    List<State> chainStates = chain.get(i);
+                    State maxState = (State) chainStates.get(chainStates.size() - 1);
+
+                    if (maxState.getModelScore()>= maxScore) {
+                        count++;
+                    }
+                }
+                return count >= maxCount || chain.size() >= NUMBER_OF_SAMPLING_STEPS;
             }
         };
 
@@ -227,7 +266,7 @@ public class Pipeline {
          * 
          */
         MyBeamSearchSampler<AnnotatedDocument, State, String> sampler = new MyBeamSearchSampler<>(model, objective, explorers,
-                stoppingCriterion);
+                scoreStoppingCriterion);
         sampler.setTestSamplingStrategy(BeamSearchSamplingStrategies.greedyBeamSearchSamplingStrategyByModel(BEAM_SIZE_TEST, s -> s.getModelScore()));
         sampler.setTestAcceptStrategy(AcceptStrategies.strictModelAccept());
 
@@ -246,7 +285,7 @@ public class Pipeline {
          */
 
         Performance.logTest(testResults, objective);
-        
+
 //        double overAllScore = 0;
 //        String testPrint = "HERE IS THE START OF PRINT";
 //        int c = 0;
@@ -285,7 +324,6 @@ public class Pipeline {
 //        testPrint += "\nTest results : " + MACROF1 + " Instances with 1.0: "+ c;
 //
 //        System.out.println(testPrint);
-
 //        log.info(testPrint);
         /*
          * Now, that the predicted states have there objective score computed
@@ -305,14 +343,14 @@ public class Pipeline {
 //        Map<String, Double> scores = ResultEvaluator.evaluateAllByObjective(testResults, objective);
 //        System.out.println("Evaluation : \t" + scores);
     }
-    
-    public static void test(String pathToModel, List<AnnotatedDocument> testDocuments){
-        QATemplateFactory.initialize(validPOSTags, semanticTypes);
+
+    public static void test(String pathToModel, List<AnnotatedDocument> testDocuments) {
         
+
         List<AbstractTemplate<AnnotatedDocument, State, ?>> templates = new ArrayList<>();
 //        templates.add(new ResourceTemplate(validPOSTags, semanticTypes));
 //        templates.add(new PropertyTemplate(validPOSTags, semanticTypes));
-        templates.add(new LexicalTemplate(validPOSTags, semanticTypes));
+        templates.add(new LexicalTemplate(validPOSTags, frequentWordsToExclude, semanticTypes));
 
         /*
          * Create the scorer object that computes a score from the factors'
@@ -323,19 +361,19 @@ public class Pipeline {
          * Define a model and provide it with the necessary templates.
          */
         Model<AnnotatedDocument, State> model = new Model<>(scorer, templates);
-        
+
         /*
          * initialize QATemplateFactory
          */
-        QATemplateFactory.initialize(validPOSTags, semanticTypes);
-        
+        QATemplateFactory.initialize(validPOSTags, frequentWordsToExclude, semanticTypes);
+
         QATemplateFactory f = new QATemplateFactory();
-        
+
         try {
             model.loadModelFromDir(pathToModel, f);
-            
+
             test(model, testDocuments);
-            
+
         } catch (ClassNotFoundException ex) {
             java.util.logging.Logger.getLogger(Pipeline.class.getName()).log(Level.SEVERE, null, ex);
         } catch (UnkownTemplateRequestedException ex) {

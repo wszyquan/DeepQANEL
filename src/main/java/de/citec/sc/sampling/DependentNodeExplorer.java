@@ -10,6 +10,7 @@ import de.citec.sc.query.Instance;
 import de.citec.sc.query.ManualLexicon;
 
 import de.citec.sc.query.Search;
+import de.citec.sc.utils.DBpediaEndpoint;
 import de.citec.sc.utils.Stopwords;
 import de.citec.sc.variable.State;
 
@@ -28,12 +29,12 @@ public class DependentNodeExplorer implements Explorer<State> {
 
     private Map<Integer, String> semanticTypes;
     private Set<String> validPOSTags;
-    private Search indexLookUp;
+    private Set<String> frequentWordsToExclude;
 
-    public DependentNodeExplorer(Search indexLookUp, Map<Integer, String> assignedDUDES, Set<String> validPOSTags) {
+    public DependentNodeExplorer(Map<Integer, String> assignedDUDES, Set<String> validPOSTags, Set<String> wordToExclude) {
         this.semanticTypes = assignedDUDES;
-        this.indexLookUp = indexLookUp;
         this.validPOSTags = validPOSTags;
+        this.frequentWordsToExclude = wordToExclude;
     }
 
     @Override
@@ -45,82 +46,112 @@ public class DependentNodeExplorer implements Explorer<State> {
 
             String pos = currentState.getDocument().getParse().getPOSTag(indexOfNode);
 
-            if (validPOSTags.contains(pos)) {
-                //assign all dudes
-                for (Integer indexOfDude : semanticTypes.keySet()) {
+            if (!validPOSTags.contains(pos)) {
+                continue;
+            }
+            if (frequentWordsToExclude.contains(node.toLowerCase())) {
+                continue;
+            }
+            //assign all dudes
+            for (Integer indexOfDude : semanticTypes.keySet()) {
 
-                    String dudeName = semanticTypes.get(indexOfDude);
+                String dudeName = semanticTypes.get(indexOfDude);
 
-                    boolean hasUppercase = !node.equals(node.toLowerCase());
+//                boolean hasUppercase = !node.equals(node.toLowerCase());
+                //Australian, Swedish, Danish => restriction classes
+//                    if (hasUppercase && pos.startsWith("JJ")) {
+//                        //add restriction, it can only be restriction class
+//                        if (!dudeName.equals("RestrictionClass")) {
+//                            continue;
+//                        }
+//                    }
+                
+                Set<Candidate> headNodeCandidates = getDBpediaMatches(dudeName, node);
 
-                    //Australian, Swedish, Danish => restriction classes
-                    if (hasUppercase && pos.startsWith("JJ")) {
-                        //add restriction, it can only be restriction class
-                        if (!dudeName.equals("RestrictionClass")) {
+                if (headNodeCandidates.isEmpty()) {
+                    continue;
+                }
+
+                List<Integer> depNodes = currentState.getDocument().getParse().getDependentEdges(indexOfNode, validPOSTags, frequentWordsToExclude);
+                /**
+                 * if dep nodes is empty get sibling nodes
+                 */
+                if (depNodes.isEmpty()) {
+                    int headOfHeadNodeIndex = currentState.getDocument().getParse().getParentNode(indexOfNode);
+                    String headOfHeadPOS = currentState.getDocument().getParse().getPOSTag(headOfHeadNodeIndex);
+                    String headOfHeadToken = currentState.getDocument().getParse().getToken(headOfHeadNodeIndex);
+                    
+                    if(frequentWordsToExclude.contains(headOfHeadToken)){
+                        depNodes = currentState.getDocument().getParse().getSiblings(indexOfNode, validPOSTags, frequentWordsToExclude);
+                    }
+                }
+
+                for (Integer depNodeIndex : depNodes) {
+                    
+                    //greedy exploring, skip nodes with assigned URI
+                    if(!currentState.getHiddenVariables().get(depNodeIndex).getCandidate().getUri().equals("EMPTY_STRING")){
+                        continue;
+                    }
+                    
+                    String depNode = currentState.getDocument().getParse().getNodes().get(depNodeIndex);
+
+
+                    for (Integer indexOfDepDude : semanticTypes.keySet()) {
+
+                        String depDudeName = semanticTypes.get(indexOfDepDude);
+
+                        Set<Candidate> depNodeCandidates = getDBpediaMatches(depDudeName, depNode);
+
+                        if (depNodeCandidates.isEmpty()) {
                             continue;
                         }
-                    }
 
-                    List<Integer> depNodes = currentState.getDocument().getParse().getDependentEdges(indexOfNode);
+                        for (Candidate headNodeCandidate : headNodeCandidates) {
+                            for (Candidate depNodeCandidate : depNodeCandidates) {
 
-                    for (Integer depNodeIndex : depNodes) {
-                        String depNode = currentState.getDocument().getParse().getNodes().get(depNodeIndex);
+                                if(headNodeCandidate.getUri().equals("http://dbpedia.org/ontology/field###http://dbpedia.org/resource/Oceanography") && depNodeCandidate.getUri().equals("http://dbpedia.org/ontology/birthPlace###http://dbpedia.org/resource/Sweden")){
+                                    int z=1;
+                                }
+                                boolean isSubject = DBpediaEndpoint.isSubjectTriple(headNodeCandidate.getUri(), depNodeCandidate.getUri());
+                                boolean isObject = DBpediaEndpoint.isObjectTriple(headNodeCandidate.getUri(), depNodeCandidate.getUri());
 
-                        String depPos = currentState.getDocument().getParse().getPOSTag(depNodeIndex);
+                                if (isSubject) {
+                                    State s = new State(currentState);
 
-                        if (validPOSTags.contains(depPos)) {
+                                    s.addHiddenVariable(indexOfNode, indexOfDude, headNodeCandidate);
+                                    s.addHiddenVariable(depNodeIndex, indexOfDepDude, depNodeCandidate);
+                                    
+                                    //Argument is 1 => subj
+                                    s.addSlotVariable(depNodeIndex, indexOfNode, 1);
 
-                            for (Integer indexOfDepDude : semanticTypes.keySet()) {
+                                    if (!s.equals(currentState)) {
+                                        newStates.add(s);
+                                    }
+                                }
+                                if (isObject) {
+                                    State s = new State(currentState);
 
-                                String depDudeName = semanticTypes.get(indexOfDepDude);
-                                
-                                
+                                    s.addHiddenVariable(indexOfNode, indexOfDude, headNodeCandidate);
+                                    s.addHiddenVariable(depNodeIndex, indexOfDepDude, depNodeCandidate);
+
+                                    //Argument number is 2 => obj
+                                    s.addSlotVariable(depNodeIndex, indexOfNode, 2);
+                                    
+                                    if (!s.equals(currentState)) {
+                                        newStates.add(s);
+                                    }
+                                }
                             }
                         }
                     }
-
-//                    if(!(dudeName.equals("Class") || dudeName.equals("UnderSpecifiedClass"))){
-//                        continue;
-//                    }
-                    Set<State> newCreatedStates = createNewStates(node.toLowerCase(), currentState, indexOfNode, dudeName, indexOfDude);
-
-                    for (State s1 : newCreatedStates) {
-
-                        if (!newStates.contains(s1)) {
-                            newStates.add(new State(s1));
-                        }
-                    }
-
                 }
-
             }
         }
 
         return newStates;
     }
 
-    private Set<State> createNewStates(String node, State currentState, int indexOfNode, String dude, Integer indexOfDude) {
-        Set<State> newStates = new LinkedHashSet<>();
-
-        String posTag = currentState.getDocument().getParse().getPOSTag(indexOfNode);
-        Set<Candidate> uris = getDBpediaMatches(dude, node, posTag);
-
-        //create new State for each URI
-        for (Candidate i : uris) {
-
-            State s = new State(currentState);
-
-            s.addHiddenVariable(indexOfNode, indexOfDude, i);
-
-            if (!s.equals(currentState)) {
-                newStates.add(s);
-            }
-        }
-
-        return newStates;
-    }
-
-    private Set<Candidate> getDBpediaMatches(String dude, String node, String posTag) {
+    private Set<Candidate> getDBpediaMatches(String dude, String node) {
         //predicate DUDE
         Set<Candidate> uris = new LinkedHashSet<>();
 
@@ -141,104 +172,106 @@ public class DependentNodeExplorer implements Explorer<State> {
 
         String queryTerm = node.toLowerCase().trim();
 
-        if (dude.equals("Property")) {
+        switch (dude) {
+            case "Property":
+                useLemmatizer = true;
+                useWordNet = false;
+                mergePartialMatches = false;
 
-            useLemmatizer = true;
-            useWordNet = false;
-            mergePartialMatches = false;
-
-            if (!Stopwords.isStopWord(queryTerm)) {
-                Set<Candidate> propertyURIs = indexLookUp.getPredicates(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
-                uris.addAll(propertyURIs);
-            }
-
-            //retrieve manual lexicon even if it's in stop word list
-            if (ManualLexicon.useManualLexicon) {
-                Set<String> definedLexica = ManualLexicon.getProperties(queryTerm);
-                for (String d : definedLexica) {
-                    uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                if (!Stopwords.isStopWord(queryTerm)) {
+                    Set<Candidate> propertyURIs = Search.getPredicates(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
+                    uris.addAll(propertyURIs);
                 }
-            }
 
-        } //class DUDE        
-        else if (dude.equals("Class")) {
-
-            useLemmatizer = true;
-            mergePartialMatches = false;
-            useWordNet = false;
-            if (!Stopwords.isStopWord(queryTerm)) {
-                Set<Candidate> classURIs = indexLookUp.getClasses(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
-
-                uris.addAll(classURIs);
-            }
-
-            //retrieve manual lexicon even if it's in stop word list
-            if (ManualLexicon.useManualLexicon) {
-                Set<String> definedLexica = ManualLexicon.getClasses(queryTerm);
-                for (String d : definedLexica) {
-                    uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                //retrieve manual lexicon even if it's in stop word list
+                if (ManualLexicon.useManualLexicon) {
+                    Set<String> definedLexica = ManualLexicon.getProperties(queryTerm);
+                    for (String d : definedLexica) {
+                        uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                    }
                 }
-            }
+                break;
 
-        } //underspecified class
-        else if (dude.equals("UnderSpecifiedClass")) {
+            case "Class":
+                useLemmatizer = true;
+                mergePartialMatches = false;
+                useWordNet = false;
+                if (!Stopwords.isStopWord(queryTerm)) {
+                    Set<Candidate> classURIs = Search.getClasses(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
 
-            useLemmatizer = true;
-            useWordNet = false;
-            mergePartialMatches = false;
-
-            if (!Stopwords.isStopWord(queryTerm)) {
-                Set<Candidate> restrictionClassURIs = indexLookUp.getRestrictionClasses(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
-                uris.addAll(restrictionClassURIs);
-            }
-
-            topK = 10;
-            useLemmatizer = false;
-            mergePartialMatches = false;
-            useWordNet = false;
-
-            //extract resources
-            if (!Stopwords.isStopWord(queryTerm)) {
-                Set<Candidate> resourceURIs = indexLookUp.getResources(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
-
-                uris.addAll(resourceURIs);
-            }
-
-            //check manual lexicon for Restriction Classes
-            if (ManualLexicon.useManualLexicon) {
-                Set<String> definedLexica = ManualLexicon.getRestrictionClasses(queryTerm);
-                for (String d : definedLexica) {
-                    uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                    uris.addAll(classURIs);
                 }
-            }
 
-            //check manual lexicon for Resources => to make underspecified class
-            if (ManualLexicon.useManualLexicon) {
-                Set<String> definedLexica = ManualLexicon.getResources(queryTerm);
-                for (String d : definedLexica) {
-                    uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                //retrieve manual lexicon even if it's in stop word list
+                if (ManualLexicon.useManualLexicon) {
+                    Set<String> definedLexica = ManualLexicon.getClasses(queryTerm);
+                    for (String d : definedLexica) {
+                        uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                    }
                 }
-            }
+                break;
+            case "RestrictionClass":
+                useLemmatizer = true;
+                useWordNet = false;
+                mergePartialMatches = false;
 
-        } //entity DUDE
-        else if (dude.equals("Individual")) {
-
-            topK = 10;
-            useLemmatizer = false;
-            mergePartialMatches = false;
-            useWordNet = false;
-            if (!Stopwords.isStopWord(queryTerm)) {
-                Set<Candidate> resourceURIs = indexLookUp.getResources(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
-                uris.addAll(resourceURIs);
-            }
-
-            //check manual lexicon
-            if (ManualLexicon.useManualLexicon) {
-                Set<String> definedLexica = ManualLexicon.getResources(queryTerm);
-                for (String d : definedLexica) {
-                    uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                if (!Stopwords.isStopWord(queryTerm)) {
+                    Set<Candidate> restrictionClassURIs = Search.getRestrictionClasses(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
+                    uris.addAll(restrictionClassURIs);
                 }
-            }
+
+                //check manual lexicon for Restriction Classes
+                if (ManualLexicon.useManualLexicon) {
+                    Set<String> definedLexica = ManualLexicon.getRestrictionClasses(queryTerm);
+                    for (String d : definedLexica) {
+                        uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                    }
+                }
+                break;
+            case "UnderSpecifiedClass":
+                topK = 10;
+                useLemmatizer = false;
+                mergePartialMatches = false;
+                useWordNet = false;
+
+                //extract resources
+                if (!Stopwords.isStopWord(queryTerm)) {
+                    Set<Candidate> resourceURIs = Search.getResources(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
+
+                    //set some empty propertyy
+                    for (Candidate c : resourceURIs) {
+                        c.setUri("<someProperty>###" + c.getUri());
+                    }
+
+                    uris.addAll(resourceURIs);
+                }
+
+                //check manual lexicon for Resources => to make underspecified class
+                if (ManualLexicon.useManualLexicon) {
+                    Set<String> definedLexica = ManualLexicon.getResources(queryTerm);
+                    for (String d : definedLexica) {
+                        uris.add(new Candidate(new Instance("<someProperty>###" + d, 10000), 0, 1.0, 1.0));
+                    }
+                }
+                break;
+            case "Individual":
+                topK = 10;
+                useLemmatizer = false;
+                mergePartialMatches = false;
+                useWordNet = false;
+                if (!Stopwords.isStopWord(queryTerm)) {
+                    Set<Candidate> resourceURIs = Search.getResources(queryTerm, topK, useLemmatizer, mergePartialMatches, useWordNet);
+                    uris.addAll(resourceURIs);
+                }
+
+                //check manual lexicon
+                if (ManualLexicon.useManualLexicon) {
+                    Set<String> definedLexica = ManualLexicon.getResources(queryTerm);
+                    for (String d : definedLexica) {
+                        uris.add(new Candidate(new Instance(d, 10000), 0, 1.0, 1.0));
+                    }
+                }
+                break;
         }
 
         return uris;

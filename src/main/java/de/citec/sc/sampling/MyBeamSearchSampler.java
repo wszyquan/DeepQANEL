@@ -153,8 +153,9 @@ public class MyBeamSearchSampler<InstanceT, StateT extends AbstractState<Instanc
         //loop over generated chain and check if any state has 1.0 as objective score
         
         List<StateT> lastChain = generatedChain.get(generatedChain.size() - 1);
-        State s = (State) lastChain.get(lastChain.size() - 1);
-
+        //get the highest scoring state
+        StateT finalState = lastChain.stream().max((s1, s2) -> Double.compare(s1.getObjectiveScore(), s2.getObjectiveScore())).get();
+        State s = (State) finalState;
         
         if (s.getObjectiveScore() == 1.0) {
             Performance.addParsed(s.getDocument().getQuestionString(), s.getDocument().getGoldQueryString());

@@ -23,12 +23,14 @@ public class State extends AbstractState<AnnotatedDocument> {
     private AnnotatedDocument document;
 
     private Map<Integer, HiddenVariable> hiddenVariables;
+    private Map<Integer, SlotVariable> slotVariables;
 
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 17 * hash + Objects.hashCode(this.document);
-        hash = 17 * hash + Objects.hashCode(this.hiddenVariables);
+        hash = 29 * hash + Objects.hashCode(this.document);
+        hash = 29 * hash + Objects.hashCode(this.hiddenVariables);
+        hash = 29 * hash + Objects.hashCode(this.slotVariables);
         return hash;
     }
 
@@ -47,8 +49,21 @@ public class State extends AbstractState<AnnotatedDocument> {
         if (!Objects.equals(this.hiddenVariables, other.hiddenVariables)) {
             return false;
         }
+        if (!Objects.equals(this.slotVariables, other.slotVariables)) {
+            return false;
+        }
         return true;
     }
+
+    public Map<Integer, SlotVariable> getSlotVariables() {
+        return slotVariables;
+    }
+
+    public void setSlotVariables(Map<Integer, SlotVariable> slotVariables) {
+        this.slotVariables = slotVariables;
+    }
+
+    
 
     public Map<Integer, HiddenVariable> getHiddenVariables() {
         return hiddenVariables;
@@ -61,8 +76,9 @@ public class State extends AbstractState<AnnotatedDocument> {
 
     public State(AnnotatedDocument instance) {
         super(instance);
-        this.document = (AnnotatedDocument) document;
+        this.document = (AnnotatedDocument) instance;
         this.hiddenVariables = new TreeMap<>();
+        this.slotVariables = new HashMap<>();
 
     }
 
@@ -72,12 +88,18 @@ public class State extends AbstractState<AnnotatedDocument> {
         this.setDocument(state.document);
 
         //clone dudes
-        HashMap<Integer, HiddenVariable> hiddenVariables = new HashMap<>();
+        HashMap<Integer, HiddenVariable> h = new HashMap<>();
         for (Integer d : state.hiddenVariables.keySet()) {
-            hiddenVariables.put(d, state.hiddenVariables.get(d).clone());
+            h.put(d, state.hiddenVariables.get(d).clone());
+        }
+        //clone slots
+        HashMap<Integer, SlotVariable> s = new HashMap<>();
+        for (Integer d : state.slotVariables.keySet()) {
+            s.put(d, state.slotVariables.get(d).clone());
         }
 
-        this.hiddenVariables = hiddenVariables;
+        this.hiddenVariables = h;
+        this.slotVariables = s;
     }
     
     
@@ -90,6 +112,12 @@ public class State extends AbstractState<AnnotatedDocument> {
 
     }
 
+    public void addSlotVariable(Integer tokenID, Integer parentTokenID, Integer slotNumber) {
+        
+        SlotVariable s = new SlotVariable(slotNumber, tokenID, parentTokenID);
+        
+        this.slotVariables.put(tokenID, s);
+    }
 
 
     @Override
@@ -100,6 +128,12 @@ public class State extends AbstractState<AnnotatedDocument> {
         
         for (Integer d : hiddenVariables.keySet()) {
             state += hiddenVariables.get(d).toString() + "\n";
+        }
+        
+        state += "\nSlotVariables:\n";
+        
+        for (Integer d : slotVariables.keySet()) {
+            state += slotVariables.get(d).toString() + "\n";
         }
 
         state += "\nObjectiveScore: " + getObjectiveScore();

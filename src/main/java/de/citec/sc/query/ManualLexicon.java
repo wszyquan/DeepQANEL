@@ -240,16 +240,22 @@ public class ManualLexicon {
         addLexicon("calories", "http://dbpedia.org/ontology/approximateCalories", lexiconProperties);
         addLexicon("kind", "http://dbpedia.org/ontology/genre", lexiconProperties);
         addLexicon("in", "http://dbpedia.org/ontology/ingredient", lexiconProperties);
+        addLexicon("end", "http://dbpedia.org/ontology/activeYearsEndDate", lexiconProperties);
+        addLexicon("pay", "http://dbpedia.org/ontology/currency", lexiconProperties);
+        addLexicon("home stadium", "http://dbpedia.org/ontology/ground", lexiconProperties);
+        addLexicon("seats", "http://dbpedia.org/ontology/seatingCapacity", lexiconProperties);
 
         //resources
         addLexicon("kaurismäki", "http://dbpedia.org/resource/Aki_Kaurismäki", lexiconResources);
         addLexicon("Grand Prix at Cannes", "http://dbpedia.org/resource/Grand_Prix_(Cannes_Film_Festival)", lexiconResources);
         addLexicon("chocolate chip cookie", "http://dbpedia.org/resource/Chocolate_chip_cookie", lexiconResources);
+        addLexicon("Sonny and Cher", "http://dbpedia.org/resource/Cher", lexiconResources);
 
         //restriction classes
         addLexicon("czech", "http://dbpedia.org/ontology/country###http://dbpedia.org/resource/Czech_Republic", lexiconRestrictionClasses);
         addLexicon("computer scientist", "http://dbpedia.org/ontology/field###http://dbpedia.org/resource/Computer_science", lexiconRestrictionClasses);
         addLexicon("canadian", "http://dbpedia.org/ontology/birthPlace###http://dbpedia.org/resource/Canada", lexiconRestrictionClasses);
+        addLexicon("canadians", "http://dbpedia.org/ontology/birthPlace###http://dbpedia.org/resource/Canada", lexiconRestrictionClasses);
     }
 
     private static void addLexicon(String key, String value, HashMap<String, Set<String>> map) {

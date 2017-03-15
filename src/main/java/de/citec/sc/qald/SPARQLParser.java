@@ -5,18 +5,7 @@
  */
 package de.citec.sc.qald;
 
-import com.hp.hpl.jena.query.Query;
-import com.hp.hpl.jena.query.QueryFactory;
-import com.hp.hpl.jena.sparql.core.TriplePath;
-import com.hp.hpl.jena.sparql.core.Var;
-import com.hp.hpl.jena.sparql.expr.Expr;
-import com.hp.hpl.jena.sparql.expr.ExprAggregator;
-import com.hp.hpl.jena.sparql.syntax.Element;
-import com.hp.hpl.jena.sparql.syntax.ElementFilter;
-import com.hp.hpl.jena.sparql.syntax.ElementGroup;
-import com.hp.hpl.jena.sparql.syntax.ElementOptional;
-import com.hp.hpl.jena.sparql.syntax.ElementPathBlock;
-import com.hp.hpl.jena.sparql.syntax.ElementTriplesBlock;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -24,6 +13,18 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.apache.jena.query.Query;
+import org.apache.jena.query.QueryFactory;
+import org.apache.jena.sparql.core.TriplePath;
+import org.apache.jena.sparql.core.Var;
+import org.apache.jena.sparql.expr.Expr;
+import org.apache.jena.sparql.expr.ExprAggregator;
+import org.apache.jena.sparql.syntax.Element;
+import org.apache.jena.sparql.syntax.ElementFilter;
+import org.apache.jena.sparql.syntax.ElementGroup;
+import org.apache.jena.sparql.syntax.ElementOptional;
+import org.apache.jena.sparql.syntax.ElementPathBlock;
+import org.apache.jena.sparql.syntax.ElementTriplesBlock;
 
 /**
  *
@@ -192,7 +193,8 @@ public class SPARQLParser {
 
             List<ExprAggregator> aggregators = query.getAggregators();
             for (ExprAggregator a : aggregators) {
-                returnVariable = a.getAggregator().getExpr().getVarName();
+                returnVariable = a.getAggVar().getVarName();
+//                returnVariable = a.getAggregator()..getExpr().getVarName();
 
                 Triple t = new Triple();
 
@@ -373,10 +375,11 @@ public class SPARQLParser {
 
         Set<Triple> triples = new LinkedHashSet<>();
 
-        Iterator<com.hp.hpl.jena.graph.Triple> iterator = block.patternElts();
+        
+        Iterator<org.apache.jena.graph.Triple> iterator = block.patternElts();
 
         while (iterator.hasNext()) {
-            com.hp.hpl.jena.graph.Triple t = iterator.next();
+            org.apache.jena.graph.Triple t = iterator.next();
 
             Triple triple = new Triple();
 
