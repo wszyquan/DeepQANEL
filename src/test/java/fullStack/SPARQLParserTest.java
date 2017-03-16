@@ -3,18 +3,25 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package de.citec.sc.qald;
+package fullStack;
 
+import de.citec.sc.qald.SPARQLParser;
 import java.util.List;
+import junit.framework.Assert;
+import org.junit.Test;
 
 /**
  *
  * @author sherzod
  */
-public class TestSPARQLParser {
-    public static void main(String[] args) {
+public class SPARQLParserTest {
+    @Test
+    public void test(){
         List<String> uris = SPARQLParser.extractURIsFromQuery("SELECT DISTINCT ?uri WHERE {  <http://dbpedia.org/resource/Wikipedia> <http://dbpedia.org/ontology/author> ?uri . } ");
         
-        System.out.println(uris);
+        System.out.println("Extracted URIs: "+uris);
+        Assert.assertEquals(true, uris.contains("http://dbpedia.org/resource/Wikipedia"));
+        Assert.assertEquals(true, uris.contains("http://dbpedia.org/ontology/author"));
+        
     }
 }

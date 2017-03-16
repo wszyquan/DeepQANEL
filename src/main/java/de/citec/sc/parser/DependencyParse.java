@@ -77,10 +77,10 @@ public class DependencyParse {
 
             //get 1,2 token
             for (int r = 1; r <= 2; r++) {
-                
+
                 if (i + r < allNodes.size()) {
-                    
-                    List<Integer> mergedNodes = allNodes.subList(i, i + r+1);
+
+                    List<Integer> mergedNodes = allNodes.subList(i, i + r + 1);
                     String postags = "";
                     String mergedTokens = "";
                     for (Integer m : mergedNodes) {
@@ -596,6 +596,52 @@ public class DependencyParse {
 
         }
 
+    }
+
+    /**
+     * removes loops from edges that linking to itself
+     */
+    public void removeLoops() {
+        boolean isLoop = true;
+
+        while (isLoop) {
+            Integer loopRelationKey = -1;
+            Integer loopRelationValue = -1;
+
+            for (Integer k : getRelations().keySet()) {
+                Integer v = getRelations().get(k);
+
+                if (k.equals(v)) {
+                    isLoop = true;
+
+                    loopRelationKey = k;
+                    loopRelationValue = v;
+                    break;
+                }
+                //check if any relations has v as Key, and k as Value
+
+                if (getRelations().containsKey(v)) {
+
+                    Integer otherK = getRelations().get(v);
+
+                    if (k.equals(otherK)) {
+                        isLoop = true;
+                        
+                        loopRelationKey = k;
+                        loopRelationValue = v;
+                        break;
+                    }
+                }
+            }
+
+            if (loopRelationKey != -1 && loopRelationValue != -1) {
+                System.out.println("Removed loop from edge: " +loopRelationKey +", "+ loopRelationValue);
+                relations.remove(loopRelationKey, loopRelationValue);
+            } else {
+                isLoop = false;
+            }
+
+        }
     }
 
     public void addNode(int index, String label, String pos, int beginPosition, int endPosition) {

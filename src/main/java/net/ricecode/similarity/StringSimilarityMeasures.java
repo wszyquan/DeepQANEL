@@ -11,34 +11,43 @@ package net.ricecode.similarity;
  */
 public class StringSimilarityMeasures implements SimilarityStrategy {
 
-    private LevenshteinDistanceStrategy l;
-    private DiceCoefficientStrategy dc;
-
     public StringSimilarityMeasures() {
-        l = new LevenshteinDistanceStrategy();
-        dc = new DiceCoefficientStrategy();
     }
 
     /**
      * @param first
      * @param second
-     * 
-     * computes F1 measure of DiceCoefficient Similarity and Levenshtein Distance Similarity combined given two strings
-     * 
+     *
+     * computes F1 measure of DiceCoefficient Similarity and Levenshtein
+     * Distance Similarity combined given two strings
+     *
      * @return double score
      */
     public static double score(String first, String second) {
-        double s1 = LevenshteinDistanceStrategy.score(first, second);
+        double l = LevenshteinDistanceStrategy.score(first, second);
 
-        double s2 = DiceCoefficientStrategy.score(first, second);
+        double d = DiceCoefficientStrategy.score(first, second);
 
-        double f1 =  (2 * s1 * s2) / (s1 + s2);
-        
-        if(Double.isNaN(f1)){
-            f1 = 0;
+        double levenshteinContribution = 0.8, diceCoefficientContribution = 0.2;
+
+        //multiple lines, then use dice coefficient
+        if (first.split(" ").length > 2 && second.split(" ").length > 2) {
+
+            levenshteinContribution = 0.1;
+
+            diceCoefficientContribution = 0.9;
         }
 
-        return s1;
+        //dice coefficient works better with multiple words and mixed order
+        //prefer dice coefficient over levenshtein
+        //in other cases prefer levenshtein
+        double score = (d * diceCoefficientContribution) + (l * levenshteinContribution);
+
+        if (Double.isNaN(score)) {
+            score = 0;
+        }
+
+        return score;
     }
 
 }

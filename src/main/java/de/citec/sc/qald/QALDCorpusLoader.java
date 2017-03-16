@@ -97,72 +97,41 @@ public class QALDCorpusLoader {
         for (Question q : questions) {
             DependencyParse parse = StanfordParser.parse(q.getQuestionText());
 
-            //check if there are any loops
-            boolean isLoop = false;
-            String loop = "";
-            for (Integer k : parse.getRelations().keySet()) {
-                Integer v = parse.getRelations().get(k);
+            parse.removeLoops();
 
-                if (k.equals(v)) {
-                    isLoop = true;
-                    loop = k + " " + v;
-                    break;
-                }
-                //check if any relations has v as Key, and k as Value
+            AnnotatedDocument document = new AnnotatedDocument(parse, q);
 
-                if (parse.getRelations().containsKey(v)) {
-
-                    Integer otherK = parse.getRelations().get(v);
-
-                    if (k.equals(otherK)) {
-                        isLoop = true;
-                        loop = k + " " + v;
-                        break;
-                    }
-                }
-            }
-
-            if (!isLoop) {
-
-                AnnotatedDocument document = new AnnotatedDocument(parse, q);
-
-                documents.add(document);
-                
-            } else {
-                System.out.println(parse);
-                System.out.println("Loop at: " + loop);
-
-            }
+            documents.add(document);
 
         }
-        
-        for(AnnotatedDocument doc : documents){
-            if(!includeAggregation){
-                if(doc.getQaldInstance().getAggregation().equals("true")){
+
+        for (AnnotatedDocument doc : documents) {
+            if (!includeAggregation) {
+                if (doc.getQaldInstance().getAggregation().equals("true")) {
                     continue;
                 }
             }
-            if(!includeYAGO){
-                if(doc.getQaldInstance().getQueryText().contains("http://dbpedia.org/class/yago/")){
+            if (!includeYAGO) {
+                if (doc.getQaldInstance().getQueryText().contains("http://dbpedia.org/class/yago/")) {
                     continue;
                 }
             }
-            if(!includeUNION){
-                if(doc.getQaldInstance().getQueryText().contains("UNION")){
+            if (!includeUNION) {
+                if (doc.getQaldInstance().getQueryText().contains("UNION")) {
                     continue;
                 }
             }
-            if(!isHybrid){
-                if(doc.getQaldInstance().getHybrid().equals("true")){
+            if (!isHybrid) {
+                if (doc.getQaldInstance().getHybrid().equals("true")) {
                     continue;
                 }
             }
-            if(onlyDBO){
-                if(doc.getQaldInstance().getOnlyDBO().equals("false")){
+            if (onlyDBO) {
+                if (doc.getQaldInstance().getOnlyDBO().equals("false")) {
                     continue;
                 }
             }
-            
+
             corpus.addDocument(doc);
         }
 

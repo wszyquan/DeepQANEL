@@ -26,7 +26,7 @@ import org.w3c.dom.NodeList;
  */
 public class QALD {
 
-    public static void main(String[] args) {
+    public static void save(String[] args) {
         ArrayList<Question> q = getQuestions("src/main/resources/qald_test.xml");
 
         String query = "QUERY";

@@ -17,30 +17,6 @@ public class LevenshteinDistanceStrategy implements SimilarityStrategy {
      * @throws NullPointerException if one or both of the strings are null
      */
     
-    
-    public static void main(String[] args) {
-        LevenshteinDistanceStrategy l = new LevenshteinDistanceStrategy();
-        DiceCoefficientStrategy dc = new DiceCoefficientStrategy();
-        JaroStrategy j= new JaroStrategy();
-        
-        StringSimilarityMeasures sm = new StringSimilarityMeasures();
-        
-        
-        
-        System.out.println(l.score("team football national","national soccer team"));
-        System.out.println(l.score("owner","created"));
-        
-        System.out.println(dc.score("team football national","national soccer team"));
-        System.out.println(dc.score("owner","created"));
-        
-        System.out.println(sm.score("team football national","national soccer team"));
-        System.out.println(sm.score("owner","created"));
-       
-        
- 
-        
-        
-    }
     public static double score(String first, String second) {
         int maxLength = Math.max(first.length(), second.length());
         //Can't divide by 0

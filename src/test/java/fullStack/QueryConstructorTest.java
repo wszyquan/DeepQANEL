@@ -3,9 +3,11 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package de.citec.sc.learning;
+package fullStack;
 
 import de.citec.sc.corpus.AnnotatedDocument;
+import de.citec.sc.evaluator.QueryEvaluator;
+import de.citec.sc.learning.QueryConstructor;
 import de.citec.sc.parser.DependencyParse;
 import de.citec.sc.qald.Question;
 import de.citec.sc.query.Candidate;
@@ -14,15 +16,19 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import junit.framework.Assert;
+import org.junit.Test;
 
 /**
  *
  * @author sherzod
  */
-public class TestQueryConstructor {
+public class QueryConstructorTest {
    
     
-    public static void main(String[] args){
+//    public static void main(String[] args){
+    @Test
+    public void test(){
         
         //semantic types to sample from
         Map<Integer, String> semanticTypes = new LinkedHashMap<>();
@@ -109,7 +115,15 @@ public class TestQueryConstructor {
         
         String query = QueryConstructor.getSPARQLQuery(state);
         
-        System.out.println(query);
+        System.out.println("Constructed Query : \n"+query);
+        
+        String expectedQuery = "SELECT DISTINCT ?uri WHERE { <http://dbpedia.org/resource/Family_Guy> <http://dbpedia.org/ontology/creator> ?uri . }  ";
+        
+        double simScore = QueryEvaluator.evaluate(query, expectedQuery);
+        
+        System.out.println("Similarity score to expected query: " + simScore);
+        
+        Assert.assertEquals(1.0, simScore);
         
         
     }

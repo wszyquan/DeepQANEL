@@ -612,12 +612,6 @@ public class Stemmer {
      * must be done outside the Stemmer class. Usage: Stemmer file-name
      * file-name ...
      */
-    public static void main(String[] args) {
-        Stemmer stemmer = new Stemmer();
-
-        System.out.println(stemmer.process("created"));
-        System.out.println(stemmer.process("creator"));
-    }
 
     public String process(String s) {
         Stemmer stemmer = new Stemmer();
